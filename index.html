@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌌 ATLANTIS · UNIVERSUM · CONTINUUM · COCKPIT</title>
+
+<style>
+:root {
+    --bg: #0a0a12;
+    --fg: #0ff;
+    --gold: #ffd700;
+    --step1: #f44;
+    --step2: #4f4;
+    --step3: #4ff;
+    --step4: #f4f;
+    --step5: #ff4;
+    --step6: #44f;
+    --orbit: #6b6bff;
+    --suite: #ff66ff;
+    --commander: #ff8c00;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Consolas', monospace;
+    min-height: 100vh;
+    padding: 10px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 8px;
+}
+
+header {
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+header h1 {
+    font-size: 20px;
+    color: var(--gold);
+    letter-spacing: 3px;
+}
+header h1 .atlantis { color: var(--step3); }
+header h1 .universum { color: var(--step1); }
+header h1 .continuum { color: var(--step2); }
+#clock { font-size: 12px; color: #666; }
+
+main {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 8px;
+    height: 100%;
+    min-height: 400px;
+}
+
+#cockpit {
+    background: #0a0a0f;
+    border: 1px solid #1a1a2a;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#orbit-suite {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.orbit-card {
+    background: #0e0e1a;
+    border: 1px solid #1a1a2a;
+    border-radius: 6px;
+    padding: 8px;
+    text-align: center;
+}
+.orbit-card .symbol { font-size: 20px; display: block; }
+.orbit-card .name { color: var(--gold); font-size: 9px; margin: 2px 0; }
+.orbit-card .wert { color: var(--fg); font-size: 14px; font-weight: bold; }
+.orbit-card.orbit .wert { color: var(--orbit); }
+.orbit-card.suite .wert { color: var(--suite); }
+.orbit-card.commander .wert { color: var(--commander); }
+
+#pipeline-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+.pipe-step {
+    background: #0e0e1a;
+    border: 1px solid #1a1a2a;
+    border-radius: 4px;
+    padding: 4px;
+    text-align: center;
+    font-size: 8px;
+    color: #666;
+}
+.pipe-step .level { color: var(--gold); font-weight: bold; font-size: 12px; }
+.pipe-step.active { border-color: var(--fg); background: #0f1a1a; }
+.pipe-step.active .level { color: var(--fg); }
+
+#commander-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+button {
+    background: #111;
+    color: var(--fg);
+    border: 1px solid #333;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 9px;
+    transition: all 0.2s;
+}
+button:hover { border-color: var(--gold); background: #1a1a2a; }
+button.primary { border-color: var(--gold); color: var(--gold); }
+button.primary:hover { background: var(--gold); color: #000; }
+button.speed { border-color: var(--commander); color: var(--commander); }
+button.speed:hover { background: var(--commander); color: #000; }
+button.orbit { border-color: var(--orbit); color: var(--orbit); }
+button.orbit:hover { background: var(--orbit); color: #000; }
+button.suite { border-color: var(--suite); color: var(--suite); }
+button.suite:hover { background: var(--suite); color: #000; }
+button.danger { border-color: #f44; color: #f44; }
+button.danger:hover { background: #f44; color: #000; }
+
+#log {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 8px;
+    color: #6a6a8a;
+    line-height: 1.3;
+    min-height: 60px;
+    max-height: 120px;
+    background: #06060a;
+    border-radius: 4px;
+    padding: 4px 6px;
+    margin-top: 4px;
+}
+#log .entry { padding: 1px 0; border-bottom: 1px solid #0a0a12; }
+#log .time { color: #444; }
+#log .msg.ok { color: #4f4; }
+#log .msg.speed { color: var(--commander); }
+#log .msg.orbit { color: var(--orbit); }
+#log .msg.suite { color: var(--suite); }
+#log .msg.universum { color: var(--step1); }
+
+#panel {
+    background: #0a0a0f;
+    border: 1px solid #1a1a2a;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+#panel h3 { font-size: 10px; color: #666; border-bottom: 1px solid #1a1a2a; padding-bottom: 4px; }
+
+.status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    font-size: 9px;
+    color: #666;
+}
+.status-grid .wert { color: var(--fg); }
+.status-grid .gold { color: var(--gold); }
+
+.universum-box {
+    background: #0e0e1a;
+    border: 1px solid #1a1a2a;
+    border-radius: 4px;
+    padding: 6px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--step1);
+}
+.universum-box .gross { font-size: 24px; display: block; }
+
+#controls {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.console {
+    background: #111;
+    border: 1px solid #333;
+    padding: 8px;
+    font-size: 9px;
+    white-space: pre-wrap;
+    min-height: 50px;
+    border-radius: 4px;
+    color: #0f0;
+    margin-top: 4px;
+}
+
+@media (max-width: 800px) {
+    main { grid-template-columns: 1fr; }
+    #orbit-suite { grid-template-columns: 1fr; }
+    #pipeline-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>
+        <span class="atlantis">🌌 ATLANTIS</span>
+        <span style="color:#666;">·</span>
+        <span class="universum">UNIVERSUM</span>
+        <span style="color:#666;">·</span>
+        <span class="continuum">CONTINUUM</span>
+    </h1>
+    <div>
+        <span id="clock">⏱️ --:--:--</span>
+        <span style="margin-left:12px;color:#666;" id="cycle-count">CYC 0</span>
+    </div>
+</header>
+
+<main>
+    <div id="cockpit">
+        <h2 style="color:var(--commander);font-size:13px;margin-bottom:4px;">🚀 SPEED COMMANDER · COCKPIT</h2>
+
+        <!-- Orbit · Suite · Commander -->
+        <div id="orbit-suite">
+            <div class="orbit-card orbit">
+                <span class="symbol">🔄</span>
+                <div class="name">ORBIT</div>
+                <div class="wert" id="orbit-wert">0.00</div>
+            </div>
+            <div class="orbit-card suite">
+                <span class="symbol">🎭</span>
+                <div class="name">SUITE</div>
+                <div class="wert" id="suite-wert">0.00</div>
+            </div>
+            <div class="orbit-card commander">
+                <span class="symbol">⚡</span>
+                <div class="name">COMMANDER</div>
+                <div class="wert" id="commander-wert">0.00</div>
+            </div>
+        </div>
+
+        <!-- Pipelineblitz -->
+        <div id="pipeline-grid">
+            <div class="pipe-step active"><div class="level">3</div>Grund</div>
+            <div class="pipe-step"><div class="level">9</div>Erweiterung</div>
+            <div class="pipe-step"><div class="level">27</div>Motor</div>
+            <div class="pipe-step"><div class="level">81</div>Vollendung</div>
+        </div>
+
+        <!-- Universum Box -->
+        <div class="universum-box">
+            <span class="gross">🌌</span>
+            <span id="universum-status">UNIVERSUM · OFFEN</span>
+            <span style="display:block;font-size:8px;color:#666;" id="continuum-status">CONTINUUM · SYNCHRON</span>
+        </div>
+
+        <!-- Commander Actions -->
+        <div id="commander-actions">
+            <button class="speed" id="btn-speed">⚡ SPEED</button>
+            <button class="orbit" id="btn-orbit">🔄 ORBIT</button>
+            <button class="suite" id="btn-suite">🎭 SUITE</button>
+            <button class="primary" id="btn-pulse">▶ PULSE</button>
+            <button class="danger" id="btn-reset">⟲ RESET</button>
+        </div>
+
+        <!-- Log -->
+        <div id="log">
+            <div class="entry"><span class="time">[INIT]</span> <span class="msg ok">🌌 ATLANTIS · UNIVERSUM · CONTINUUM</span></div>
+            <div class="entry"><span class="time">[INIT]</span> <span class="msg speed">🚀 SPEED COMMANDER aktiv</span></div>
+        </div>
+
+        <div class="console" id="commander-out">Bereit für Speed-Commando…</div>
+    </div>
+
+    <div id="panel">
+        <h3>📊 STATUS</h3>
+        <div class="status-grid">
+            <div>Universum: <span class="wert" id="uni-status">● offen</span></div>
+            <div>Continuum: <span class="wert" id="cont-status">● synchron</span></div>
+            <div>Orbit: <span class="gold" id="orbit-status">0.00</span></div>
+            <div>Suite: <span class="gold" id="suite-status">0.00</span></div>
+            <div>Commander: <span class="gold" id="cmd-status">0.00</span></div>
+            <div>Pipeline: <span class="gold" id="pipe-status">3</span></div>
+        </div>
+        <div style="display:flex;gap:6px;font-size:8px;color:#666;border-top:1px solid #1a1a2a;padding-top:4px;">
+            <span>🔴 <span id="status-led" style="color:#4f4;">●</span> aktiv</span>
+            <span>⚡ <span id="speed-count">0</span> Befehle</span>
+        </div>
+    </div>
+</main>
+
+<script>
+// ============================================================
+// ATLANTIS · UNIVERSUM · CONTINUUM · SPEED COMMANDER
+// ============================================================
+
+// ─── STATE ────────────────────────────────────────────────────
+const state = {
+    orbit: 0.5,
+    suite: 0.5,
+    commander: 0.5,
+    universum: 'offen',
+    continuum: 'synchron',
+    pipeline: 3,
+    speedCount: 0,
+    running: false,
+    cycle: 0
+};
+
+// ─── DOM ──────────────────────────────────────────────────────
+const logDiv = document.getElementById('log');
+const orbitWert = document.getElementById('orbit-wert');
+const suiteWert = document.getElementById('suite-wert');
+const commanderWert = document.getElementById('commander-wert');
+const universumStatus = document.getElementById('universum-status');
+const continuumStatus = document.getElementById('continuum-status');
+const uniStatus = document.getElementById('uni-status');
+const contStatus = document.getElementById('cont-status');
+const orbitStatus = document.getElementById('orbit-status');
+const suiteStatus = document.getElementById('suite-status');
+const cmdStatus = document.getElementById('cmd-status');
+const pipeStatus = document.getElementById('pipe-status');
+const statusLed = document.getElementById('status-led');
+const speedCount = document.getElementById('speed-count');
+const commanderOut = document.getElementById('commander-out');
+const cycleCountEl = document.getElementById('cycle-count');
+
+// ─── LOG ──────────────────────────────────────────────────────
+function log(msg, type = 'ok') {
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+    const time = new Date().toLocaleTimeString();
+    const cls = type === 'ok' ? 'ok' : type === 'speed' ? 'speed' : type === 'orbit' ? 'orbit' : type === 'suite' ? 'suite' : type === 'universum' ? 'universum' : '';
+    entry.innerHTML = `<span class="time">[${time}]</span> <span class="msg ${cls}">${msg}</span>`;
+    logDiv.appendChild(entry);
+    logDiv.scrollTop = logDiv.scrollHeight;
+    while (logDiv.children.length > 30) logDiv.removeChild(logDiv.firstChild);
+}
+
+// ─── UPDATE UI ──────────────────────────────────────────────
+function updateUI() {
+    orbitWert.textContent = state.orbit.toFixed(2);
+    suiteWert.textContent = state.suite.toFixed(2);
+    commanderWert.textContent = state.commander.toFixed(2);
+    orbitStatus.textContent = state.orbit.toFixed(2);
+    suiteStatus.textContent = state.suite.toFixed(2);
+    cmdStatus.textContent = state.commander.toFixed(2);
+    pipeStatus.textContent = state.pipeline;
+    uniStatus.textContent = state.universum === 'offen' ? '● offen' : '● geschlossen';
+    contStatus.textContent = state.continuum === 'synchron' ? '● synchron' : '● asynchron';
+    universumStatus.textContent = `UNIVERSUM · ${state.universum.toUpperCase()}`;
+    continuumStatus.textContent = `CONTINUUM · ${state.continuum.toUpperCase()}`;
+    speedCount.textContent = state.speedCount;
+    statusLed.style.color = state.running ? '#4f4' : '#f44';
+
+    // Pipeline-Status
+    const steps = document.querySelectorAll('.pipe-step');
+    const levels = [3, 9, 27, 81];
+    steps.forEach((step, i) => {
+        step.classList.toggle('active', state.pipeline >= levels[i]);
+    });
+}
+
+// ─── SPEED COMMANDER ──────────────────────────────────────────
+function speedCommand() {
+    state.speedCount++;
+    state.orbit = Math.min(1, state.orbit + 0.05 + Math.random() * 0.1);
+    state.suite = Math.min(1, state.suite + 0.05 + Math.random() * 0.1);
+    state.commander = Math.min(1, state.commander + 0.05 + Math.random() * 0.1);
+
+    // Pipeline weiter
+    const levels = [3, 9, 27, 81];
+    const idx = levels.indexOf(state.pipeline);
+    state.pipeline = levels[(idx + 1) % levels.length];
+
+    state.cycle++;
+    cycleCountEl.textContent = `CYC ${state.cycle}`;
+
+    updateUI();
+    commanderOut.textContent = `⚡ SPEED COMMANDO #${state.speedCount}\nOrbit: ${state.orbit.toFixed(2)}\nSuite: ${state.suite.toFixed(2)}\nCommander: ${state.commander.toFixed(2)}\nPipeline: ${state.pipeline}`;
+    log(`⚡ SPEED #${state.speedCount} · Pipeline ${state.pipeline}`, 'speed');
+
+    if (state.speedCount % 5 === 0) {
+        state.universum = state.universum === 'offen' ? 'geschlossen' : 'offen';
+        state.continuum = state.continuum === 'synchron' ? 'asynchron' : 'synchron';
+        log(`🌌 UNIVERSUM ${state.universum.toUpperCase()} · CONTINUUM ${state.continuum.toUpperCase()}`, 'universum');
+        updateUI();
+    }
+}
+
+// ─── ORBIT ────────────────────────────────────────────────────
+function orbitCommand() {
+    state.orbit = Math.min(1, state.orbit + 0.1);
+    updateUI();
+    commanderOut.textContent = `🔄 ORBIT: ${state.orbit.toFixed(2)}`;
+    log(`🔄 ORBIT = ${state.orbit.toFixed(2)}`, 'orbit');
+}
+
+// ─── SUITE ────────────────────────────────────────────────────
+function suiteCommand() {
+    state.suite = Math.min(1, state.suite + 0.1);
+    updateUI();
+    commanderOut.textContent = `🎭 SUITE: ${state.suite.toFixed(2)}`;
+    log(`🎭 SUITE = ${state.suite.toFixed(2)}`, 'suite');
+}
+
+// ─── PULSE ────────────────────────────────────────────────────
+function pulseCommand() {
+    state.running = !state.running;
+    if (state.running) {
+        log('▶ PULSE aktiviert', 'ok');
+        commanderOut.textContent = '▶ PULSE · System läuft';
+    } else {
+        log('⏸ PULSE pausiert', 'ok');
+        commanderOut.textContent = '⏸ PULSE · System pausiert';
+    }
+    updateUI();
+}
+
+// ─── RESET ────────────────────────────────────────────────────
+function resetAll() {
+    state.orbit = 0.5;
+    state.suite = 0.5;
+    state.commander = 0.5;
+    state.pipeline = 3;
+    state.speedCount = 0;
+    state.cycle = 0;
+    state.universum = 'offen';
+    state.continuum = 'synchron';
+    state.running = false;
+    updateUI();
+    commanderOut.textContent = '⟲ RESET · System bereit';
+    cycleCountEl.textContent = 'CYC 0';
+    log('⟲ RESET — Alles zurückgesetzt', 'ok');
+}
+
+// ─── AUTO ────────────────────────────────────────────────────
+let autoTimer = null;
+function toggleAuto() {
+    if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+        log('⏸ AUTO pausiert', 'ok');
+        return;
+    }
+    autoTimer = setInterval(() => {
+        if (state.running) {
+            speedCommand();
+        }
+    }, 2000);
+    log('▶ AUTO gestartet', 'ok');
+}
+
+// ─── EVENTS ──────────────────────────────────────────────────
+document.getElementById('btn-speed').addEventListener('click', speedCommand);
+document.getElementById('btn-orbit').addEventListener('click', orbitCommand);
+document.getElementById('btn-suite').addEventListener('click', suiteCommand);
+document.getElementById('btn-pulse').addEventListener('click', pulseCommand);
+document.getElementById('btn-reset').addEventListener('click', resetAll);
+
+// ─── TASTATUR ──────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+    if (e.key === ' ') { e.preventDefault(); speedCommand(); }
+    if (e.key === 'o' || e.key === 'O') orbitCommand();
+    if (e.key === 's' || e.key === 'S') suiteCommand();
+    if (e.key === 'p' || e.key === 'P') pulseCommand();
+    if (e.key === 'a' || e.key === 'A') toggleAuto();
+    if (e.key === 'x' || e.key === 'X') resetAll();
+});
+
+// ─── UHR ──────────────────────────────────────────────────────
+function updateClock() {
+    document.getElementById('clock').textContent = `⏱️ ${new Date().toLocaleTimeString()}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── INIT ────────────────────────────────────────────────────
+log('🌌 ATLANTIS · UNIVERSUM · CONTINUUM geladen', 'ok');
+log('🚀 SPEED COMMANDER aktiv', 'speed');
+log('⌨️  space=Speed  o=Orbit  s=Suite  p=Pulse  a=Auto  x=Reset', 'ok');
+
+updateUI();
+commanderOut.textContent = '🚀 SPEED COMMANDER · Bereit';
+
+console.log('🌌 ATLANTIS · UNIVERSUM · CONTINUUM · SPEED COMMANDER');
+console.log('⌨️  space=Speed  o=Orbit  s=Suite  p=Pulse  a=Auto  x=Reset');
+
+// Auto-Start nach 1 Sekunde
+setTimeout(() => {
+    state.running = true;
+    updateUI();
+    log('▶ AUTO-START · System aktiv', 'ok');
+    toggleAuto();
+}, 1000);
+</script>
+</body>
+</html>
