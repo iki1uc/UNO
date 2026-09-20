@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>◈ NC.ECONOMY · Rekonstruktion · iki1uc</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --bg:#04070e; --bg2:#0a101e; --bg3:#101828;
+    --fg:#c8d8e8; --dim:#5a7288; --dim2:#2a3644;
+    --green:#7ce0a8; --green2:#b0ffd8;
+    --cyan:#5fc8ff; --gold:#ffcc44; --violet:#b388ff;
+    --pink:#ff88b0; --red:#ff5a7a; --amber:#ff8a2a;
+    --ok:#7ce0a8; --warn:#ffcc44; --err:#ff5a7a;
+    --line:rgba(140,180,220,0.09);
+    --line2:rgba(140,180,220,0.04);
+    --mono:'Consolas','Courier New',monospace;
+    --serif:'Yu Mincho','Hiragino Mincho ProN',serif;
+  }
+  html,body{height:100%;overflow:hidden;}
+  body{background:#000;color:var(--fg);font-family:var(--mono);font-size:12px;}
+  #desk{
+    width:100vw;height:100vh;background:var(--bg);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  #desk::before{
+    content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(124,224,168,0.04) 0%, transparent 45%),
+      radial-gradient(ellipse at 80% 70%, rgba(179,136,255,0.04) 0%, transparent 45%);
+    animation:bgBreathe 10s ease-in-out infinite;
+  }
+  @keyframes bgBreathe{0%,100%{opacity:.5;}50%{opacity:1;}}
+
+  /* ── TOPBAR ── */
+  #topbar{
+    height:34px;background:linear-gradient(180deg,#0a101e,#04070e);
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:center;padding:0 14px;
+    font-size:11px;letter-spacing:1px;gap:12px;
+    flex-shrink:0;position:relative;z-index:5;
+  }
+  #topbar .logo{
+    color:var(--green);font-weight:bold;letter-spacing:3px;
+    font-family:var(--serif);display:flex;align-items:center;gap:8px;
+    text-shadow:0 0 10px var(--green);
+  }
+  #topbar .logo b{color:var(--gold);}
+  #topbar .eye{
+    display:inline-block;width:9px;height:9px;border-radius:50%;
+    background:var(--green);box-shadow:0 0 12px var(--green);
+    animation:eyePulse 3s ease-in-out infinite;
+  }
+  @keyframes eyePulse{0%,100%{transform:scale(.9);}50%{transform:scale(1.35);}}
+  #topbar .sep{width:1px;height:16px;background:var(--line);}
+  #topbar .path{color:var(--dim);font-size:10px;letter-spacing:2px;}
+  #topbar .stat{
+    color:var(--dim);font-size:10px;display:flex;gap:12px;
+    margin-left:auto;align-items:center;flex-wrap:wrap;
+  }
+  #topbar .stat b{font-weight:bold;}
+  #topbar .stat b.g{color:var(--green);}
+  #topbar .stat b.c{color:var(--cyan);}
+  #topbar .stat b.gd{color:var(--gold);text-shadow:0 0 6px var(--gold);}
+  #topbar .stat b.v{color:var(--violet);}
+  #topbar .stat b.p{color:var(--pink);}
+  #topbar .stat b.a{color:var(--amber);}
+  #topbar #clock{color:var(--cyan);}
+
+  /* ── MAIN 3 COLS ── */
+  #main{
+    flex:1;display:grid;
+    grid-template-columns: 250px 1fr 290px;
+    overflow:hidden;min-height:0;position:relative;z-index:2;
+  }
+  @media(max-width:1200px){#main{grid-template-columns:220px 1fr 250px;}}
+  @media(max-width:900px){#main{grid-template-columns:1fr;}#tree,#rightCol{display:none;}}
+
+  /* ── BAUM ── */
+  #tree{
+    background:var(--bg2);border-right:1px solid var(--line);
+    overflow-y:auto;padding:8px 0;font-size:11px;
+  }
+  #tree::-webkit-scrollbar{width:5px;}
+  #tree::-webkit-scrollbar-thumb{background:var(--line);}
+  .hdr{
+    padding:8px 12px 4px;color:var(--dim);font-size:9px;
+    letter-spacing:2px;text-transform:uppercase;
+    font-family:var(--serif);border-bottom:1px solid var(--line2);
+    margin-bottom:4px;
+  }
+  .node{
+    padding:4px 12px 4px 22px;color:var(--fg);
+    cursor:pointer;display:flex;justify-content:space-between;
+    align-items:center;font-size:10.5px;
+    border-left:2px solid transparent;transition:.15s;
+    position:relative;
+  }
+  .node::before{content:'▸';position:absolute;left:8px;color:var(--dim2);font-size:9px;}
+  .node:hover{background:rgba(124,224,168,0.06);border-left-color:var(--green);}
+  .node.active{background:rgba(124,224,168,0.1);border-left-color:var(--green);color:var(--green);}
+  .node .ind{color:var(--dim2);font-size:9px;}
+  .node.green .ind{color:var(--green);}
+  .node.gold .ind{color:var(--gold);}
+  .node.violet .ind{color:var(--violet);}
+  .node.pink .ind{color:var(--pink);}
+  .node.amber .ind{color:var(--amber);}
+
+  /* ── CENTER ── */
+  #center{
+    display:flex;flex-direction:column;overflow-y:auto;
+    padding:10px;gap:10px;min-height:0;
+  }
+  #center::-webkit-scrollbar{width:6px;}
+  #center::-webkit-scrollbar-thumb{background:var(--line);}
+
+  .panel{
+    background:var(--bg2);border:1px solid var(--line);
+    border-radius:6px;padding:10px 12px;position:relative;overflow:hidden;
+  }
+  .panel h3{
+    font-size:10px;letter-spacing:1.8px;color:var(--green);
+    text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;
+    border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;
+    font-family:var(--serif);font-weight:normal;
+  }
+  .panel h3 .badge{
+    font-size:9px;padding:1px 7px;border-radius:3px;
+    letter-spacing:0.5px;font-family:var(--mono);font-weight:bold;
+    background:rgba(124,224,168,0.1);color:var(--green);
+  }
+  .panel h3 .badge.gold{background:rgba(255,204,68,0.1);color:var(--gold);}
+  .panel h3 .badge.violet{background:rgba(179,136,255,0.1);color:var(--violet);}
+  .panel h3 .badge.pink{background:rgba(255,136,176,0.1);color:var(--pink);}
+  .panel h3 .badge.amber{background:rgba(255,138,42,0.1);color:var(--amber);}
+
+  /* Kaskade */
+  #kaskade{
+    display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;
+  }
+  .kcell{
+    background:var(--bg3);border:1px solid var(--line);
+    border-radius:5px;padding:10px 6px;text-align:center;
+    transition:.3s;position:relative;
+  }
+  .kcell.on{
+    border-color:var(--gold);
+    box-shadow:0 0 16px rgba(255,204,68,0.4);
+    background:rgba(255,204,68,0.08);
+  }
+  .kcell .v{
+    font-family:var(--serif);font-size:24px;font-weight:bold;
+    letter-spacing:1px;color:var(--gold);
+    text-shadow:0 0 10px var(--gold);
+  }
+  .kcell .l{font-size:8px;color:var(--dim);letter-spacing:1.5px;margin-top:3px;text-transform:uppercase;}
+  .kcell.a .v{color:var(--green);text-shadow:0 0 10px var(--green);}
+  .kcell.b .v{color:var(--cyan);text-shadow:0 0 10px var(--cyan);}
+  .kcell.c .v{color:var(--violet);text-shadow:0 0 10px var(--violet);}
+  .kcell.d .v{color:var(--gold);}
+  .kcell.on.a{border-color:var(--green);box-shadow:0 0 16px rgba(124,224,168,0.5);}
+  .kcell.on.b{border-color:var(--cyan);box-shadow:0 0 16px rgba(95,200,255,0.5);}
+  .kcell.on.c{border-color:var(--violet);box-shadow:0 0 16px rgba(179,136,255,0.5);}
+
+  /* 9×9 Matrix */
+  #matrixWrap{
+    display:flex;justify-content:center;
+  }
+  #matrix9{
+    display:grid;
+    grid-template-columns:repeat(9,1fr);
+    grid-template-rows:repeat(9,1fr);
+    gap:2px;
+    aspect-ratio:1;
+    background:#03060c;
+    padding:6px;border-radius:8px;
+    border:1px solid rgba(124,224,168,0.2);
+    width:100%;max-width:420px;
+    box-shadow:0 0 20px rgba(124,224,168,0.06) inset;
+  }
+  .m9{
+    background:rgba(16,24,40,0.6);
+    border-radius:3px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:8px;color:#3a4a5a;
+    transition:all .22s;cursor:pointer;
+    font-weight:bold;position:relative;
+    font-family:var(--mono);
+  }
+  .m9:hover{transform:scale(1.12);z-index:3;border:1px solid var(--green);}
+  .m9.slot-0{background:rgba(16,24,40,0.6);color:#3a4a5a;}
+  .m9.slot-1{background:rgba(95,200,255,0.12);color:var(--cyan);}
+  .m9.slot-2{background:rgba(179,136,255,0.12);color:var(--violet);}
+  .m9.slot-3{background:rgba(255,204,68,0.15);color:var(--gold);}
+  .m9.slot-4{
+    background:rgba(255,136,176,0.22);color:var(--pink);
+    box-shadow:inset 0 0 10px rgba(255,136,176,0.5);
+  }
+  .m9.user{
+    background:rgba(255,204,68,0.35) !important;
+    color:#fff !important;
+    box-shadow:0 0 12px rgba(255,204,68,0.7);
+    animation:userPulse 0.9s ease-in-out infinite;
+  }
+  @keyframes userPulse{
+    0%,100%{box-shadow:0 0 8px rgba(255,204,68,0.6);}
+    50%{box-shadow:0 0 20px rgba(255,204,68,0.9);}
+  }
+  .m9.runner{
+    outline:2px solid var(--cyan);outline-offset:1px;
+    z-index:5;animation:runnerPulse .7s ease-in-out infinite;
+  }
+  @keyframes runnerPulse{
+    0%,100%{box-shadow:0 0 8px rgba(95,200,255,0.7);}
+    50%{box-shadow:0 0 22px rgba(95,200,255,1);}
+  }
+  .m9 .axis-tag{
+    position:absolute;top:1px;right:2px;
+    font-size:6px;color:var(--dim2);
+  }
+
+  /* Buttons */
+  .btn-row{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;}
+  .mbtn{
+    background:var(--bg3);color:var(--fg);
+    border:1px solid var(--line);
+    padding:6px 11px;border-radius:3px;
+    font-family:inherit;font-size:9.5px;
+    letter-spacing:1px;cursor:pointer;
+    transition:.15s;text-transform:uppercase;flex:1;min-width:70px;
+  }
+  .mbtn:hover{border-color:var(--green);background:rgba(124,224,168,0.1);color:var(--green);}
+  .mbtn.g{border-color:rgba(124,224,168,0.4);color:var(--green);}
+  .mbtn.g:hover{background:rgba(124,224,168,0.18);border-color:var(--green);color:#fff;}
+  .mbtn.c{border-color:rgba(95,200,255,0.4);color:var(--cyan);}
+  .mbtn.c:hover{background:rgba(95,200,255,0.15);border-color:var(--cyan);color:#fff;}
+  .mbtn.v{border-color:rgba(179,136,255,0.4);color:var(--violet);}
+  .mbtn.v:hover{background:rgba(179,136,255,0.15);border-color:var(--violet);color:#fff;}
+  .mbtn.gd{border-color:rgba(255,204,68,0.4);color:var(--gold);}
+  .mbtn.gd:hover{background:rgba(255,204,68,0.15);border-color:var(--gold);color:#fff;}
+  .mbtn.err{border-color:rgba(255,90,122,0.4);color:var(--err);}
+  .mbtn.err:hover{background:rgba(255,90,122,0.15);border-color:var(--err);color:#fff;}
+
+  /* ── RECHTS ── */
+  #rightCol{
+    background:var(--bg2);border-left:1px solid var(--line);
+    overflow-y:auto;padding:10px;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  #rightCol::-webkit-scrollbar{width:5px;}
+  #rightCol::-webkit-scrollbar-thumb{background:var(--line);}
+
+  .maz{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;
+  }
+  .maz .m{
+    background:var(--bg3);border:1px solid var(--line);
+    border-radius:5px;padding:8px 4px;text-align:center;
+  }
+  .maz .m .nm{font-family:var(--serif);font-size:9.5px;letter-spacing:2px;margin-bottom:4px;font-weight:bold;}
+  .maz .m .v{font-size:14px;font-weight:bold;}
+  .maz .m .b{height:3px;background:#0a1420;border-radius:2px;overflow:hidden;margin-top:5px;}
+  .maz .m .b i{display:block;height:100%;width:0;transition:width .5s;}
+  .maz .mana .nm{color:var(--pink);} .maz .mana .v{color:var(--pink);text-shadow:0 0 6px var(--pink);}
+  .maz .mana .b i{background:linear-gradient(90deg,#3a0a2a,var(--pink));}
+  .maz .aura .nm{color:var(--gold);} .maz .aura .v{color:var(--gold);text-shadow:0 0 6px var(--gold);}
+  .maz .aura .b i{background:linear-gradient(90deg,#3a2a0a,var(--gold));}
+  .maz .zen .nm{color:var(--green);} .maz .zen .v{color:var(--green);text-shadow:0 0 6px var(--green);}
+  .maz .zen .b i{background:linear-gradient(90deg,#0a3a2a,var(--green));}
+
+  .stat-row{
+    display:flex;justify-content:space-between;padding:4px 0;
+    border-bottom:1px dashed var(--line2);font-size:10.5px;
+  }
+  .stat-row:last-child{border-bottom:none;}
+  .stat-row .k{color:var(--dim);}
+  .stat-row .v{color:var(--fg);font-weight:bold;}
+  .stat-row .v.ok{color:var(--green);}
+  .stat-row .v.warn{color:var(--warn);}
+  .stat-row .v.err{color:var(--err);}
+  .stat-row .v.violet{color:var(--violet);}
+  .stat-row .v.gold{color:var(--gold);}
+  .stat-row .v.cyan{color:var(--cyan);}
+  .stat-row .v.pink{color:var(--pink);}
+
+  /* Rollen */
+  .rolle-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+  .rolle{
+    background:var(--bg3);border:1px solid var(--line);
+    border-radius:4px;padding:7px 8px;cursor:pointer;
+    transition:.2s;font-size:10px;
+  }
+  .rolle:hover{border-color:var(--green);background:rgba(124,224,168,0.06);}
+  .rolle.active{
+    border-color:var(--gold);background:rgba(255,204,68,0.1);
+    box-shadow:0 0 12px rgba(255,204,68,0.3);
+  }
+  .rolle .nm{font-family:var(--serif);letter-spacing:1.5px;font-size:11px;margin-bottom:3px;}
+  .rolle .desc{font-size:8.5px;color:var(--dim);line-height:1.35;}
+  .rolle.produzent .nm{color:var(--cyan);}
+  .rolle.traeger .nm{color:var(--violet);}
+  .rolle.haendler .nm{color:var(--gold);}
+  .rolle.waechter .nm{color:var(--green);}
+
+  /* Modi */
+  .mode-list{display:flex;flex-direction:column;gap:4px;}
+  .mode-item{
+    background:var(--bg3);border:1px solid var(--line);
+    border-radius:4px;padding:6px 9px;
+    display:flex;justify-content:space-between;align-items:center;
+    cursor:pointer;transition:.15s;font-size:10px;
+  }
+  .mode-item:hover{border-color:var(--cyan);background:rgba(95,200,255,0.06);}
+  .mode-item.active{
+    border-color:var(--cyan);background:rgba(95,200,255,0.12);
+    color:var(--cyan);box-shadow:0 0 10px rgba(95,200,255,0.3);
+  }
+  .mode-item .k{color:var(--dim);font-family:var(--mono);font-size:9.5px;}
+  .mode-item .v{color:var(--green);font-weight:bold;font-size:9.5px;}
+  .mode-item.active .k{color:var(--cyan);}
+
+  /* ── CONSOLE ── */
+  #cli{
+    height:140px;background:#02040a;
+    border-top:1px solid var(--line);
+    display:flex;flex-direction:column;flex-shrink:0;
+    position:relative;z-index:5;
+  }
+  #cliHdr{
+    height:20px;background:var(--bg2);
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:center;padding:0 12px;
+    font-size:9px;letter-spacing:1.5px;color:var(--dim);
+    text-transform:uppercase;gap:12px;
+    font-family:var(--serif);
+  }
+  #cliHdr .tag{margin-left:auto;color:var(--green);font-size:9px;letter-spacing:1px;display:flex;align-items:center;gap:5px;}
+  #cliHdr .tag .led{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:eyePulse 1.6s infinite;}
+  #log{
+    flex:1;padding:6px 12px;overflow-y:auto;
+    font-size:10px;line-height:1.55;color:var(--dim);
+    font-family:var(--mono);
+  }
+  #log::-webkit-scrollbar{width:6px;}
+  #log::-webkit-scrollbar-thumb{background:var(--line);}
+  #log .ln{white-space:pre-wrap;word-break:break-all;}
+  #log .ts{color:var(--dim2);margin-right:6px;}
+  #log .ok{color:var(--green);}
+  #log .warn{color:var(--warn);}
+  #log .err{color:var(--err);}
+  #log .info{color:var(--cyan);}
+  #log .vio{color:var(--violet);}
+  #log .gold{color:var(--gold);}
+  #log .pink{color:var(--pink);}
+  #log .amber{color:var(--amber);}
+  #cliInput{
+    height:24px;background:var(--bg3);
+    border-top:1px solid var(--line);
+    display:flex;align-items:center;padding:0 12px;
+    font-size:11px;flex-shrink:0;
+  }
+  #cliInput .prompt{color:var(--green);margin-right:6px;font-weight:bold;}
+  #cliInput input{
+    flex:1;background:transparent;border:none;
+    color:var(--fg);font-family:var(--mono);
+    font-size:11px;outline:none;
+  }
+  #cliInput input::placeholder{color:var(--dim2);}
+</style>
+</head>
+<body>
+
+<div id="desk">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <span class="logo"><span class="eye"></span>NC<b>::ECONOMY</b></span>
+    <span class="sep"></span>
+    <span class="path">/root/industry &gt; index.html</span>
+    <div class="stat">
+      <span>AXV <b class="gd" id="tAxv">3</b></span>
+      <span>NC <b class="c" id="tNC">0</b></span>
+      <span>MANA <b class="p" id="tMana">0%</b></span>
+      <span>AURA <b class="gd" id="tAura">0%</b></span>
+      <span>ZEN <b class="g" id="tZen">0%</b></span>
+      <span>VITAL <b class="g" id="tVital">100%</b></span>
+      <span>BAL <b class="c" id="tBal">1.00</b></span>
+      <span id="clock">--:--:--</span>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- TREE -->
+    <div id="tree">
+      <div class="hdr">▸ Core</div>
+      <div class="node green" data-n="home"><span>home/</span><span class="ind">●</span></div>
+      <div class="node green" data-n="core"><span>core/</span><span class="ind">●</span></div>
+      <div class="node green" data-n="api"><span>API.system.js</span><span class="ind">●</span></div>
+      <div class="node green" data-n="id"><span>ID.html</span><span class="ind">●</span></div>
+
+      <div class="hdr">▸ Achsen · sli</div>
+      <div class="node gold" data-n="sliL"><span>sli/L/</span><span class="ind">L</span></div>
+      <div class="node gold" data-n="sliR"><span>sli/R/</span><span class="ind">R</span></div>
+      <div class="node green" data-n="fusion"><span>FUSION.fix</span><span class="ind">●</span></div>
+
+      <div class="hdr">▸ Bewegung</div>
+      <div class="node violet" data-n="move"><span>move/</span><span class="ind">●</span></div>
+      <div class="node violet" data-n="ort"><span>ort/</span><span class="ind">●</span></div>
+      <div class="node cyan" data-n="nav"><span>nav.js</span><span class="ind">●</span></div>
+      <div class="node cyan" data-n="router"><span>router.js</span><span class="ind">●</span></div>
+
+      <div class="hdr">▸ Rollen & Industrie</div>
+      <div class="node amber" data-n="rolle"><span>rolle/</span><span class="ind">●</span></div>
+      <div class="node amber" data-n="industry"><span>industry/</span><span class="ind">●</span></div>
+      <div class="node pink" data-n="markt"><span>markt/</span><span class="ind">●</span></div>
+      <div class="node pink" data-n="use"><span>use/</span><span class="ind">●</span></div>
+
+      <div class="hdr">▸ Modi</div>
+      <div class="node violet" data-n="use-mode"><span>use-mode/</span><span class="ind">m</span></div>
+      <div class="node violet" data-n="use.mode"><span>use.mode</span><span class="ind">m</span></div>
+      <div class="node violet" data-n="run.mode"><span>run.mode</span><span class="ind">m</span></div>
+      <div class="node violet" data-n="user.mode"><span>user.mode</span><span class="ind">m</span></div>
+
+      <div class="hdr">▸ System</div>
+      <div class="node green" data-n="boot"><span>boot.js</span><span class="ind">●</span></div>
+      <div class="node green" data-n="masterboot"><span>masterboot.js</span><span class="ind">●</span></div>
+      <div class="node green" data-n="sys"><span>sys/</span><span class="ind">●</span></div>
+      <div class="node green" data-n="NC"><span>NC/</span><span class="ind">●</span></div>
+      <div class="node gold" data-n="knoppix"><span>knoppix toram dma</span><span class="ind">⌘</span></div>
+
+      <div class="hdr">▸ Kern</div>
+      <div class="node violet" data-n="n3"><span>3.js</span><span class="ind">3</span></div>
+      <div class="node violet" data-n="n9"><span>9.js</span><span class="ind">9</span></div>
+      <div class="node violet" data-n="n27"><span>27.js</span><span class="ind">27</span></div>
+      <div class="node violet" data-n="n81"><span>81.js</span><span class="ind">81</span></div>
+      <div class="node violet" data-n="n243"><span>243.js</span><span class="ind">243</span></div>
+      <div class="node violet" data-n="n756"><span>756.js</span><span class="ind">756</span></div>
+    </div>
+
+    <!-- CENTER -->
+    <div id="center">
+
+      <!-- KASKADE -->
+      <div class="panel">
+        <h3>◈ AXV · KASKADE <span class="badge gold" id="kaskadeBadge">zyklus 3→9→81→243</span></h3>
+        <div id="kaskade">
+          <div class="kcell a" data-v="3"><div class="v">3</div><div class="l">essenz</div></div>
+          <div class="kcell b" data-v="9"><div class="v">9</div><div class="l">achsen</div></div>
+          <div class="kcell c" data-v="81"><div class="v">81</div><div class="l">matrix</div></div>
+          <div class="kcell d" data-v="243"><div class="v">243</div><div class="l">super</div></div>
+        </div>
+      </div>
+
+      <!-- MATRIX -->
+      <div class="panel">
+        <h3>◈ 9×9 · MARKTPLATZ <span class="badge" id="matBadge">81 slots · 9 user</span></h3>
+        <div id="matrixWrap"><div id="matrix9"></div></div>
+        <div style="text-align:center;font-size:9px;color:var(--dim);margin-top:8px;">
+          <span style="color:var(--cyan);">■</span> roh ·
+          <span style="color:var(--violet);">■</span> zwischen ·
+          <span style="color:var(--gold);">■</span> fertig ·
+          <span style="color:var(--pink);">■</span> special ·
+          <span style="color:#ffcc44;">★</span> user
+        </div>
+        <div class="btn-row">
+          <button class="mbtn g" id="btnRun">▶ läufer start</button>
+          <button class="mbtn" id="btnStep">⏭ step</button>
+          <button class="mbtn c" id="btnReset">⟲ reset</button>
+        </div>
+      </div>
+
+      <!-- PRODUKTION -->
+      <div class="panel">
+        <h3>◈ INDUSTRY · KETTE <span class="badge cyan" id="prodBadge">bereit</span></h3>
+        <div id="prodChain"></div>
+        <div class="btn-row">
+          <button class="mbtn c" id="btnProd">◆ produzieren</button>
+          <button class="mbtn v" id="btnTrade">⇄ handeln</button>
+          <button class="mbtn gd" id="btnSell">◈ verkaufen</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RECHTS -->
+    <div id="rightCol">
+
+      <!-- MANA/AURA/ZEN -->
+      <div class="panel">
+        <h3>◈ WERTE <span class="badge pink">live</span></h3>
+        <div class="maz">
+          <div class="m mana">
+            <div class="nm">MANA</div>
+            <div class="v" id="mMana">0%</div>
+            <div class="b"><i id="bMana"></i></div>
+          </div>
+          <div class="m aura">
+            <div class="nm">AURA</div>
+            <div class="v" id="mAura">0%</div>
+            <div class="b"><i id="bAura"></i></div>
+          </div>
+          <div class="m zen">
+            <div class="nm">ZEN</div>
+            <div class="v" id="mZen">0%</div>
+            <div class="b"><i id="bZen"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROLLEN -->
+      <div class="panel">
+        <h3>◈ ROLLEN <span class="badge amber" id="rolleBadge">händler</span></h3>
+        <div class="rolle-grid">
+          <div class="rolle produzent" data-r="produzent">
+            <div class="nm">PRODUZENT</div>
+            <div class="desc">erzeugt rohstoff</div>
+          </div>
+          <div class="rolle traeger" data-r="traeger">
+            <div class="nm">TRÄGER</div>
+            <div class="desc">bewegt güter</div>
+          </div>
+          <div class="rolle haendler active" data-r="haendler">
+            <div class="nm">HÄNDLER</div>
+            <div class="desc">tauscht · verteilt</div>
+          </div>
+          <div class="rolle waechter" data-r="waechter">
+            <div class="nm">WÄCHTER</div>
+            <div class="desc">prüft · erlaubt</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODI -->
+      <div class="panel">
+        <h3>◈ MODI <span class="badge violet" id="modeBadge">use.mode</span></h3>
+        <div class="mode-list">
+          <div class="mode-item active" data-m="use.mode">
+            <span class="k">use.mode</span><span class="v">aktiv</span>
+          </div>
+          <div class="mode-item" data-m="run.mode">
+            <span class="k">run.mode</span><span class="v">idle</span>
+          </div>
+          <div class="mode-item" data-m="user.mode">
+            <span class="k">user.mode</span><span class="v">idle</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="panel">
+        <h3>◈ METRIKEN <span class="badge">live</span></h3>
+        <div id="stats"></div>
+      </div>
+
+      <!-- FUSION -->
+      <div class="panel">
+        <h3>◈ FUSION · STATUS <span class="badge gold">sli</span></h3>
+        <div id="fusionStats"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- CONSOLE -->
+  <div id="cli">
+    <div id="cliHdr">
+      <span style="color:var(--green);">NC.ECONOMY · iki1uc</span>
+      <span class="tag"><span class="led"></span>system läuft</span>
+    </div>
+    <div id="log"></div>
+    <div id="cliInput">
+      <span class="prompt">nc&gt;</span>
+      <input id="cmdInput" placeholder="befehl: prod · trade · sell · run · step · reset · rollen · mode · status · help" autocomplete="off">
+    </div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════════════
+   NC.ECONOMY · Rekonstruktion
+   industry + markt + use + rolle + move + sli
+   nicht börse · nicht markt · nur economy
+   ═══════════════════════════════════════════════════════════════ */
+
+const S = {
+  tick: 0,
+  axv: 3,
+  axvCycle: [3, 9, 81, 243],
+  axvIdx: 0,
+  axvTimer: 0,
+
+  nc: 0,      // Non-Currency (Handelswert)
+  mana: 0.66,
+  aura: 0.74,
+  zen: 0.88,
+
+  vital: 1.00,
+  balance: 1.00,
+  drift: 0.00,
+
+  // 9×9 Slots
+  cells: [],
+  runnerIdx: 0,
+  running: false,
+  runTimer: null,
+
+  // Rollen & Modi
+  rolle: 'haendler',
+  mode: 'use.mode',
+
+  // Produktionskette
+  chain: { roh: 0, zwischen: 0, fertig: 0, special: 0 },
+
+  // Sub-Stats
+  produziert: 0,
+  getauscht: 0,
+  verkauft: 0,
+  userGefunden: 0,
+  fusion: 0,
+  kohaerenz: 0,
+
+  lastPulseT: 0,
+};
+
+const RUNNER_USER_SLOTS = [13, 47, 88, 21, 73, 5, 96, 34, 62]; // 9 User über 81 Slots
+
+/* ─── LOG ────────────────────────────────────────────── */
+const logEl = document.getElementById('log');
+function log(msg, cls='') {
+  const t = new Date().toLocaleTimeString('de-DE');
+  const div = document.createElement('div');
+  div.className = 'ln';
+  div.innerHTML = `<span class="ts">[${t}]</span><span class="${cls}">${msg}</span>`;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+  while (logEl.children.length > 120) logEl.removeChild(logEl.firstChild);
+}
+
+/* ─── MATRIX ─────────────────────────────────────────── */
+function buildMatrix() {
+  S.cells = [];
+  for (let i = 0; i < 81; i++) {
+    const isUser = RUNNER_USER_SLOTS.includes(i);
+    let slot = 0;
+    const r = Math.floor(i / 9), c = i % 9;
+    // Diagonale = Rohstoff, Anti-Diagonale = Zwischen, Kreuz = Fertig
+    if (r === c || r + c === 8) slot = 1;
+    else if (r === 4 || c === 4) slot = 2;
+    else if ((r + c) % 3 === 0) slot = 3;
+    if (isUser) slot = 4;
+    S.cells.push({
+      i, r, c,
+      slot,
+      isUser,
+      state: 0, // 0=idle, 1=checked
+      done: false,
+    });
+  }
+}
+
+function renderMatrix() {
+  const el = document.getElementById('matrix9');
+  el.innerHTML = '';
+  S.cells.forEach((cell, i) => {
+    const div = document.createElement('div');
+    div.className = `m9 slot-${cell.slot}`;
+    if (cell.isUser) div.classList.add('user');
+    if (i === S.runnerIdx) div.classList.add('runner');
+    if (cell.done) div.style.opacity = '0.5';
+    div.dataset.i = i;
+    div.textContent = cell.isUser ? '★' : (cell.slot === 0 ? '' : cell.slot);
+    div.title = `Slot ${i} · (${cell.r},${cell.c}) · ${slotName(cell.slot)}`;
+    div.addEventListener('click', () => clickCell(i));
+    el.appendChild(div);
+  });
+  document.getElementById('matBadge').textContent = `81 slots · ${RUNNER_USER_SLOTS.length} user`;
+}
+
+function slotName(s) {
+  return ['leer','roh','zwischen','fertig','user'][s];
+}
+
+function clickCell(i) {
+  const cell = S.cells[i];
+  if (cell.isUser && cell.state === 0) {
+    cell.state = 1;
+    S.userGefunden++;
+    log(`★ USER aktiviert · Slot ${i} · ${slotName(cell.slot)}`, 'gold');
+  } else if (cell.state === 0) {
+    cell.state = 1;
+    // Produktion
+    if (cell.slot === 1) S.chain.roh++;
+    else if (cell.slot === 2) S.chain.zwischen++;
+    else if (cell.slot === 3) S.chain.fertig++;
+    else if (cell.slot === 4) S.chain.special++;
+    S.produziert++;
+    log(`◆ produzieren · Slot ${i} · ${slotName(cell.slot)}`, 'info');
+  }
+  renderMatrix();
+  renderStats();
+  updateTop();
+}
+
+/* ─── RUNNER (LÄUFER) ────────────────────────────────── */
+function startRunner() {
+  if (S.running) return;
+  S.running = true;
+  log('▶ läufer gestartet · 81 slots durchlaufen', 'ok');
+  S.runTimer = setInterval(runnerStep, 90);
+}
+
+function stopRunner() {
+  S.running = false;
+  if (S.runTimer) { clearInterval(S.runTimer); S.runTimer = null; }
+  log('⏸ läufer gestoppt', 'warn');
+}
+
+function runnerStep() {
+  const cell = S.cells[S.runnerIdx];
+  if (cell && cell.state === 0) {
+    cell.state = 1;
+    if (cell.isUser) {
+      S.userGefunden++;
+      log(`★ USER · Slot ${S.runnerIdx}`, 'gold');
+    } else if (cell.slot === 1) { S.chain.roh++; S.produziert++; }
+    else if (cell.slot === 2) { S.chain.zwischen++; S.produziert++; }
+    else if (cell.slot === 3) { S.chain.fertig++; S.produziert++; }
+    else if (cell.slot === 4) { S.chain.special++; S.produziert++; }
+  }
+  S.runnerIdx = (S.runnerIdx + 1) % 81;
+  if (S.runnerIdx === 0) {
+    // Zyklus fertig
+    stopRunner();
+    log(`✔ läufer durchlauf fertig · user=${S.userGefunden}`, 'ok');
+  }
+  renderMatrix();
+  renderStats();
+  updateTop();
+}
+
+/* ─── KASKADE ────────────────────────────────────────── */
+function tickKaskade(dt) {
+  S.axvTimer += dt;
+  if (S.axvTimer > 1.5) {
+    S.axvTimer = 0;
+    S.axvIdx = (S.axvIdx + 1) % S.axvCycle.length;
+    S.axv = S.axvCycle[S.axvIdx];
+    // NC aus AXV
+    S.nc += S.axv;
+    renderKaskade();
+    updateTop();
+  }
+}
+
+function renderKaskade() {
+  document.querySelectorAll('.kcell').forEach(el => {
+    const v = parseInt(el.dataset.v, 10);
+    el.classList.toggle('on', v === S.axv);
+  });
+}
+
+/* ─── PRODUKTION ─────────────────────────────────────── */
+function renderProdChain() {
+  const el = document.getElementById('prodChain');
+  const c = S.chain;
+  el.innerHTML = `
+    <div class="stat-row"><span class="k">◆ ROHSTOFF</span><span class="v cyan">${c.roh}</span></div>
+    <div class="stat-row"><span class="k">◈ ZWISCHEN</span><span class="v violet">${c.zwischen}</span></div>
+    <div class="stat-row"><span class="k">★ FERTIG</span><span class="v gold">${c.fertig}</span></div>
+    <div class="stat-row"><span class="k">▲ SPECIAL</span><span class="v pink">${c.special}</span></div>
+  `;
+  document.getElementById('prodBadge').textContent = S.rolle;
+}
+
+/* ─── STATS ──────────────────────────────────────────── */
+function renderStats() {
+  const el = document.getElementById('stats');
+  el.innerHTML = `
+    <div class="stat-row"><span class="k">produziert</span><span class="v cyan">${S.produziert}</span></div>
+    <div class="stat-row"><span class="k">getauscht</span><span class="v violet">${S.getauscht}</span></div>
+    <div class="stat-row"><span class="k">verkauft</span><span class="v gold">${S.verkauft}</span></div>
+    <div class="stat-row"><span class="k">user gefunden</span><span class="v ok">${S.userGefunden}/9</span></div>
+    <div class="stat-row"><span class="k">nc-wert</span><span class="v gold">${S.nc}</span></div>
+    <div class="stat-row"><span class="k">axv</span><span class="v gold">${S.axv}</span></div>
+  `;
+
+  // Fusion
+  const fEl = document.getElementById('fusionStats');
+  fEl.innerHTML = `
+    <div class="stat-row"><span class="k">vital</span><span class="v ok">${(S.vital*100).toFixed(0)}%</span></div>
+    <div class="stat-row"><span class="k">balance</span><span class="v cyan">${S.balance.toFixed(2)}</span></div>
+    <div class="stat-row"><span class="k">drift</span><span class="v warn">${S.drift.toFixed(3)}</span></div>
+    <div class="stat-row"><span class="k">fusion</span><span class="v violet">${(S.fusion*100).toFixed(1)}%</span></div>
+    <div class="stat-row"><span class="k">kohärenz</span><span class="v violet">${(S.kohaerenz*100).toFixed(1)}%</span></div>
+  `;
+}
+
+/* ─── WERTE ──────────────────────────────────────────── */
+function renderWerte() {
+  document.getElementById('mMana').textContent = (S.mana*100).toFixed(0) + '%';
+  document.getElementById('mAura').textContent = (S.aura*100).toFixed(0) + '%';
+  document.getElementById('mZen').textContent  = (S.zen*100).toFixed(0) + '%';
+  document.getElementById('bMana').style.width = (S.mana*100) + '%';
+  document.getElementById('bAura').style.width = (S.aura*100) + '%';
+  document.getElementById('bZen').style.width  = (S.zen*100) + '%';
+}
+
+/* ─── TOPBAR ─────────────────────────────────────────── */
+function updateTop() {
+  document.getElementById('tAxv').textContent = S.axv;
+  document.getElementById('tNC').textContent = S.nc;
+  document.getElementById('tMana').textContent = (S.mana*100).toFixed(0) + '%';
+  document.getElementById('tAura').textContent = (S.aura*100).toFixed(0) + '%';
+  document.getElementById('tZen').textContent  = (S.zen*100).toFixed(0) + '%';
+  document.getElementById('tVital').textContent = (S.vital*100).toFixed(0) + '%';
+  document.getElementById('tBal').textContent  = S.balance.toFixed(2);
+}
+
+/* ─── AKTIONEN ───────────────────────────────────────── */
+function doProd() {
+  const rate = S.rolle === 'produzent' ? 2 : 1;
+  S.chain.roh += rate;
+  S.produziert += rate;
+  S.mana = Math.min(1, S.mana + 0.02);
+  log(`◆ produzieren · +${rate} rohstoff · mana+2%`, 'cyan');
+  renderProdChain(); renderStats(); renderWerte(); updateTop();
+}
+
+function doTrade() {
+  if (S.chain.roh < 3) { log('⚠ nicht genug rohstoff (brauche 3)', 'warn'); return; }
+  const mult = S.rolle === 'traeger' ? 2 : 1;
+  S.chain.roh -= 3;
+  S.chain.zwischen += 1 * mult;
+  S.getauscht += 1;
+  S.aura = Math.min(1, S.aura + 0.02);
+  log(`⇄ handel · -3 roh · +${mult} zwischen · aura+2%`, 'violet');
+  renderProdChain(); renderStats(); renderWerte(); updateTop();
+}
+
+function doSell() {
+  if (S.chain.zwischen < 2) { log('⚠ nicht genug zwischen (brauche 2)', 'warn'); return; }
+  const mult = S.rolle === 'haendler' ? 2 : 1;
+  S.chain.zwischen -= 2;
+  S.chain.fertig += 1 * mult;
+  S.verkauft += 1;
+  S.nc += 81 * mult;
+  S.zen = Math.min(1, S.zen + 0.02);
+  log(`◈ verkauf · -2 zwischen · +${mult} fertig · NC+${81*mult} · zen+2%`, 'gold');
+  renderProdChain(); renderStats(); renderWerte(); updateTop();
+}
+
+/* ─── ROLLEN & MODI ──────────────────────────────────── */
+document.querySelectorAll('.rolle').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.rolle').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    S.rolle = el.dataset.r;
+    document.getElementById('rolleBadge').textContent = S.rolle;
+    log(`▸ rolle → ${S.rolle}`, 'amber');
+    renderProdChain();
+  });
+});
+
+document.querySelectorAll('.mode-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.mode-item').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    S.mode = el.dataset.m;
+    document.querySelectorAll('.mode-item').forEach(x => {
+      const v = x.querySelector('.v');
+      v.textContent = x.dataset.m === S.mode ? 'aktiv' : 'idle';
+    });
+    document.getElementById('modeBadge').textContent = S.mode;
+    log(`▸ modus → ${S.mode}`, 'vio');
+  });
+});
+
+/* ─── TREE ───────────────────────────────────────────── */
+document.querySelectorAll('#tree .node').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('#tree .node').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    const n = el.dataset.n;
+    const map = {
+      home: 'home/ · einstieg',
+      core: 'core/ · kern-module',
+      api: 'API.system.js · schnittstelle',
+      id: 'ID.html · identität',
+      sliL: 'sli/L/ · linke achse · negativer spin',
+      sliR: 'sli/R/ · rechte achse · positiver spin',
+      fusion: 'FUSION.fix · beide achsen',
+      move: 'move/ · bewegungs-modul',
+      ort: 'ort/ · GEO · physik · hardware',
+      nav: 'nav.js · navigation',
+      router: 'router.js · routing',
+      rolle: 'rolle/ · HÄNDLER · TRÄGER · WÄCHTER · PRODUZENT',
+      industry: 'industry/ · produktions-modul',
+      markt: 'markt/ · marktplatz · 81 slots',
+      use: 'use/ · verwendung',
+      'use-mode': 'use-mode/ · modus-pool',
+      'use.mode': 'use.mode · standard · aktiv',
+      'run.mode': 'run.mode · ausführung',
+      'user.mode': 'user.mode · benutzer-modus',
+      boot: 'boot.js · start',
+      masterboot: 'masterboot.js · startkern',
+      sys: 'sys/ · system',
+      NC: 'NC/ · non-commerce core',
+      knoppix: 'knoppix toram dma · ram-fs wie knoppix',
+      n3: '3.js · essenz',
+      n9: '9.js · achsen',
+      n27: '27.js · zwischen',
+      n81: '81.js · matrix',
+      n243: '243.js · super',
+      n756: '756.js · über-super',
+    };
+    log(`▸ ${map[n] || n}`, 'info');
+  });
+});
+
+/* ─── BUTTONS ────────────────────────────────────────── */
+document.getElementById('btnRun').addEventListener('click', () => {
+  if (S.running) stopRunner(); else startRunner();
+});
+document.getElementById('btnStep').addEventListener('click', runnerStep);
+document.getElementById('btnReset').addEventListener('click', () => {
+  stopRunner();
+  S.runnerIdx = 0;
+  S.userGefunden = 0;
+  S.produziert = 0; S.getauscht = 0; S.verkauft = 0;
+  S.chain = { roh: 0, zwischen: 0, fertig: 0, special: 0 };
+  S.nc = 0; S.axvIdx = 0; S.axv = 3;
+  S.cells.forEach(c => c.state = 0);
+  renderMatrix(); renderStats(); renderProdChain(); renderKaskade(); updateTop();
+  log('⟲ reset · alles auf basis', 'warn');
+});
+document.getElementById('btnProd').addEventListener('click', doProd);
+document.getElementById('btnTrade').addEventListener('click', doTrade);
+document.getElementById('btnSell').addEventListener('click', doSell);
+
+/* Kaskade-Klick */
+document.querySelectorAll('.kcell').forEach(el => {
+  el.addEventListener('click', () => {
+    const v = parseInt(el.dataset.v, 10);
+    S.axv = v;
+    S.nc += v;
+    renderKaskade(); updateTop();
+    log(`◈ axv → ${v} · NC+${v}`, 'gold');
+  });
+});
+
+/* ─── CLI ────────────────────────────────────────────── */
+function handleCmd(cmd) {
+  const c = cmd.trim().toLowerCase();
+  if (!c) return;
+  log(`nc> ${cmd}`, 'info');
+  if (c === 'help') log('befehle: prod · trade · sell · run · step · reset · rollen · mode · status · kaskade · user', 'ok');
+  else if (c === 'prod') doProd();
+  else if (c === 'trade') doTrade();
+  else if (c === 'sell') doSell();
+  else if (c === 'run') startRunner();
+  else if (c === 'step') runnerStep();
+  else if (c === 'reset') document.getElementById('btnReset').click();
+  else if (c === 'rollen') log(`rollen · produzent · traeger · haendler · waechter · aktiv=${S.rolle}`, 'amber');
+  else if (c === 'mode') log(`modus · use.mode · run.mode · user.mode · aktiv=${S.mode}`, 'vio');
+  else if (c === 'kaskade') log(`kaskade · 3→9→81→243 · aktuell=${S.axv}`, 'gold');
+  else if (c === 'user') log(`user gefunden · ${S.userGefunden}/9`, S.userGefunden > 0 ? 'gold' : 'warn');
+  else if (c === 'status') log(`status · tick=${S.tick} nc=${S.nc} axv=${S.axv} prod=${S.produziert} user=${S.userGefunden}`, 'ok');
+  else log(`unbekannt: ${c}`, 'err');
+}
+
+document.getElementById('cmdInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { handleCmd(e.target.value); e.target.value = ''; }
+});
+
+/* Keyboard */
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === ' ') { e.preventDefault(); S.running ? stopRunner() : startRunner(); }
+  if (e.key === 'p' || e.key === 'P') doProd();
+  if (e.key === 't' || e.key === 'T') doTrade();
+  if (e.key === 'v' || e.key === 'V') doSell();
+  if (e.key === 'r' || e.key === 'R') document.getElementById('btnReset').click();
+});
+
+/* ─── LOOP ───────────────────────────────────────────── */
+let lastT = 0;
+function loop(now) {
+  const dt = Math.min(50, now - lastT || 16) / 1000;
+  lastT = now;
+  S.tick++;
+
+  // Kaskade
+  tickKaskade(dt);
+
+  // Drift/Balance atmen
+  S.drift = Math.abs(Math.sin(S.tick * 0.02)) * 0.03;
+  S.balance = 0.98 + Math.sin(S.tick * 0.015) * 0.02;
+  S.vital = Math.max(0.9, 1 - S.drift * 2);
+
+  // Fusion
+  S.fusion = 0.5 + Math.sin(S.tick * 0.008) * 0.3 + S.userGefunden / 9 * 0.2;
+  S.kohaerenz = 0.6 + Math.cos(S.tick * 0.01) * 0.2 + S.userGefunden / 9 * 0.2;
+
+  if (S.tick % 60 === 0) {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('de-DE');
+    renderStats();
+    updateTop();
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ─── INIT ───────────────────────────────────────────── */
+function init() {
+  buildMatrix();
+  renderMatrix();
+  renderKaskade();
+  renderStats();
+  renderProdChain();
+  renderWerte();
+  updateTop();
+
+  log('◈ NC.ECONOMY · rekonstruktion geladen', 'ok');
+  log('▸ nicht börse · nicht markt · nur economy', 'gold');
+  log('▸ 81 slots · 9 user · rolle=händler · modus=use.mode', 'info');
+  log('▸ tasten: Space=run · P=prod · T=trade · V=sell · R=reset', 'info');
+  log('▸ 3→9→81→243 kaskade aktiv', 'gold');
+
+  requestAnimationFrame(loop);
+}
+
+if (document.readyState === 'loading')
+  document.addEventListener('DOMContentLoaded', init);
+else
+  init();
+
+/* Public API */
+window.NC = {
+  state: () => S,
+  prod: doProd,
+  trade: doTrade,
+  sell: doSell,
+  run: startRunner,
+  stop: stopRunner,
+  step: runnerStep,
+  reset: () => document.getElementById('btnReset').click(),
+  cmd: handleCmd,
+  setRolle: (r) => { S.rolle = r; document.querySelectorAll('.rolle').forEach(x => x.classList.toggle('active', x.dataset.r === r)); },
+  setMode: (m) => { S.mode = m; },
+};
+
+console.log('%c◈ NC.ECONOMY · rekonstruktion', 'color:#7ce0a8;font-weight:bold;font-size:14px;');
+console.log('→ window.NC.prod() · .trade() · .sell() · .run() · .state()');
+</script>
+</body>
+</html>
