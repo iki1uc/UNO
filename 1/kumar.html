@@ -1,0 +1,79 @@
+/* ================================================================
+   KERNEL · Δ-FLUSS · KUMAR · ÜBERLEBEN
+   Idee: iki1uc · Nutzen: Brain · Lauf: runtime + real
+   ================================================================ */
+
+const KERNEL = {
+  // ── Anker (Ata → Atlan) ────────────────────────────────────────
+  anker: [3, 9, 27, 81, 243, 729],
+  ankerName: ['ATA', 'KERN', 'ORD', 'END', 'RES', 'HALL'],
+
+  // ── Δ-FLUSS ────────────────────────────────────────────────────
+  takt: 600,          // ms — eine Uhr, ein Schritt
+  tick: 0,            // wie oft gelaufen
+  fluss: 0,           // 0..1 zwischen zwei Ankern
+  links: 0,           // linker Anker-Index
+  rechts: 1,          // rechter Anker-Index
+
+  // ── KUMAR (Ethik) ──────────────────────────────────────────────
+  einsatz: 0,         // was der Nutzer eingebracht hat
+  einsatzMax: 0,      // "was du in den Wind schießen kannst"
+  anteil: 0.001,      // 1000tel — Abhebung → Firma
+  erfolg: 0,          // gehört allen
+
+  // ── ÜBERLEBEN ──────────────────────────────────────────────────
+  leben: 1,           // 1 = lebt, 0 = vorbei
+  ueberleben: 1,      // wieviel vom Leben getragen wird
+
+  // ── Lauf ───────────────────────────────────────────────────────
+  schritt() {
+    this.tick++;
+    this.fluss = (this.fluss + 1 / 60) % 1;   // 60 Schritte = 1 Ankerwechsel
+    if (this.fluss < 1 / 60) {                // Anker weiterschieben
+      this.links = this.rechts;
+      this.rechts = Math.min(this.rechts + 1, this.anker.length - 1);
+    }
+    // Überleben rechnen — kontinuierlich
+    this.ueberleben = this.leben * (1 - this.anteil * this.einsatz);
+    // Erfolg rechnen — was geworden ist
+    this.erfolg = this.wert() - this.einsatz;
+    return this.zustand();
+  },
+
+  // ── Wert im Werden ─────────────────────────────────────────────
+  wert() {
+    const a = this.anker[this.links];
+    const b = this.anker[this.rechts];
+    return a + this.fluss * (b - a);
+  },
+
+  // ── Zustand als Lauf ───────────────────────────────────────────
+  zustand() {
+    const w = this.wert().toFixed(2);
+    const fl = this.fluss.toFixed(2).replace('.', ',');
+    return `Δ-FLUSS: [${this.anker[this.links]} → ${this.anker[this.rechts]}]`
+         + ` · Fluss ${fl}`
+         + ` · Wert ${w}`
+         + ` · Takt #${this.tick}`
+         + ` · ${new Date().toLocaleTimeString('de-DE')}`
+         + ` · ÜBERLEBEN ${this.ueberleben.toFixed(3)}`;
+  },
+
+  // ── Kumar-Einsatz setzen ───────────────────────────────────────
+  setzeEinsatz(x) {
+    if (x > this.einsatzMax) {
+      return 'NEIN. Nur was du in den Wind schießen kannst.';
+    }
+    this.einsatz = x;
+    return `KUMAR: ${x} · Erfolg gehört ALLEN.`;
+  }
+};
+
+// ── Lauf starten ─────────────────────────────────────────────────
+KERNEL.einsatzMax = 100;   // Beispiel — kannst du ändern
+setInterval(() => {
+  const z = KERNEL.schritt();
+  // Anzeige: benutze deine bestehende log() falls da, sonst console
+  if (typeof log === 'function') log(z, 'ok');
+  else console.log(z);
+}, KERNEL.takt);
