@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>leben · canvas runtime · kumar</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#000;color:#0f0;font-family:monospace;overflow:hidden}
+  #canvas{display:block;width:100%;height:60vh;background:#000}
+  .frames{display:grid;grid-template-columns:1fr 1fr;height:40vh;border-top:1px solid #0f0}
+  iframe{width:100%;height:100%;border:0;background:#000}
+  .hud{position:fixed;top:8px;left:8px;font-size:11px;color:#0f0;background:rgba(0,0,0,.7);padding:6px 10px;border:1px solid #0f0;border-radius:4px;white-space:pre;pointer-events:none}
+  .legend{position:fixed;top:8px;right:8px;font-size:10px;color:#6cf;background:rgba(0,0,0,.7);padding:6px 10px;border:1px solid #6cf;border-radius:4px;white-space:pre;text-align:right;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div class="hud" id="hud">boot…</div>
+<div class="legend">⚪ HUB · Sensor
+⚪ UNO · Puls
+─ Signal
+✱ Bet (Kumar)
+∞ Übernahme</div>
+
+<div class="frames">
+  <iframe id="hub" src="respo/index.html"></iframe>
+  <iframe id="uno" src="uno/index.html"></iframe>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   LEBEN · CANVAS RUNTIME
+   Kumar-Prinzip: Nur was du in den Wind schießen kannst.
+   Zwei Organismen — ein Wirt — ein Kreislauf.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const cvs = document.getElementById('canvas');
+const ctx = cvs.getContext('2d');
+let W, H, CX, CY;
+
+function resize(){
+  W = cvs.width  = window.innerWidth;
+  H = cvs.height = window.innerHeight * 0.6;
+  CX = W/2; CY = H/2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Zustand: zwei Organismen ─────────────────────
+const hub = { name:'HUB', role:'Sensor', x:0, y:0, alive:true, beat:0, lastBeat:Date.now(), r:40, pulse:0, color:'#8cf0d0' };
+const uno = { name:'UNO', role:'Puls',   x:0, y:0, alive:true, beat:0, lastBeat:Date.now(), r:40, pulse:0, color:'#f0d080' };
+
+// Kumar: halbe Lebensernte — nie alles setzen
+const WIND = { bets:[], maxBets:21 };  // 21 = halbes Leben (42/2)
+
+// Signale: was zwischen den beiden fliegt
+const signals = [];
+
+// ── Layout ─────────────────────────────────────
+function layout(){
+  hub.x = W*0.25; hub.y = CY;
+  uno.x = W*0.75; uno.y = CY;
+}
+layout();
+window.addEventListener('resize', layout);
+
+// ── Trigger-Feuer: sendet Signal ────────────────
+function fire(from, to, payload){
+  const src = from === 'HUB' ? hub : uno;
+  const dst = to   === 'HUB' ? hub : uno;
+  signals.push({
+    from:src, to:dst,
+    t:0, speed:0.02,
+    payload: payload || {}
+  });
+  // Kumar: nur halbe Lebensernte pro Wurf
+  if(WIND.bets.length < WIND.maxBets){
+    WIND.bets.push({ from:from, t:Date.now(), half:0.5 });
+  } else {
+    WIND.bets.shift();  // ältester raus, Platz frei
+  }
+}
+
+// ── Übernahmepuls (Fallback) ────────────────────
+function takeover(which){
+  // which = wer wurde übernommen
+  const survivor = which === 'HUB' ? uno : hub;
+  survivor.pulse = 1;
+  // Ein Signal vom Übernehmer zurück
+  fire(survivor.name, which, { takeover:true });
+}
+
+// ── Update-Schleife ─────────────────────────────
+function update(dt){
+  const now = Date.now();
+
+  // Herzschlag: prüfen ob beide leben
+  for(const o of [hub, uno]){
+    const silence = now - o.lastBeat;
+    if(silence > 5000){
+      if(o.alive){
+        o.alive = false;
+        log(`${o.name} schweigt (${(silence/1000).toFixed(1)}s) → Übernahme`);
+        takeover(o.name);
+      }
+    } else {
+      if(!o.alive){
+        o.alive = true;
+        log(`${o.name} lebt wieder`);
+      }
+    }
+    // Pulse verblassen
+    o.pulse *= 0.94;
+    // Atmung
+    o.r = 40 + Math.sin(now/500 + (o.name==='HUB'?0:Math.PI)) * 4;
+  }
+
+  // Signale bewegen
+  for(let i = signals.length-1; i >= 0; i--){
+    const s = signals[i];
+    s.t += dt * s.speed * 60;
+    if(s.t >= 1){
+      // Angekommen: Beat beim Ziel
+      s.to.beat++;
+      s.to.lastBeat = now;
+      s.to.pulse = 0.8;
+      signals.splice(i, 1);
+    }
+  }
+
+  // Kumar: Bets verblassen
+  WIND.bets = WIND.bets.filter(b => now - b.t < 8000);
+}
+
+// ── Zeichnen ────────────────────────────────────
+function draw(){
+  // Hintergrund: Wind
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // Wind-Striche (Kumar-Atmosphäre)
+  ctx.strokeStyle = 'rgba(80,120,140,0.12)';
+  ctx.lineWidth = 1;
+  const t = Date.now() / 1000;
+  for(let i = 0; i < 40; i++){
+    const y = (i * 37 + t * 20) % H;
+    const x = (i * 73 + t * 60) % W;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 30, y);
+    ctx.stroke();
+  }
+
+  // Verbindung: Linie zwischen hub und uno
+  ctx.strokeStyle = (hub.alive && uno.alive) ? 'rgba(140,240,208,0.3)' : 'rgba(120,60,60,0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(hub.x, hub.y);
+  ctx.lineTo(uno.x, uno.y);
+  ctx.stroke();
+
+  // Kumar-Bets: kleine Kreise auf der Linie
+  for(const b of WIND.bets){
+    const age = (Date.now() - b.t) / 8000;
+    const x = hub.x + (uno.x - hub.x) * (b.from === 'HUB' ? 0.5 : 0.5);
+    const y = hub.y - 30 - Math.sin(age * Math.PI) * 30;
+    const alpha = 1 - age;
+    ctx.fillStyle = `rgba(255,215,0,${alpha * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(x + (Math.random()-0.5)*60, y, 3 * (1-age*0.5), 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Signale: fliegende Punkte
+  for(const s of signals){
+    const x = s.from.x + (s.to.x - s.from.x) * s.t;
+    const y = s.from.y + (s.to.y - s.from.y) * s.t;
+    const alpha = 1 - Math.abs(s.t - 0.5) * 1.6;
+    const size = 6 + Math.sin(s.t * Math.PI) * 6;
+    ctx.fillStyle = s.payload.takeover
+      ? `rgba(255,80,80,${alpha})`
+      : `rgba(255,255,255,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI*2);
+    ctx.fill();
+
+    // Spur
+    ctx.strokeStyle = s.payload.takeover
+      ? `rgba(255,80,80,${alpha*0.4})`
+      : `rgba(255,255,255,${alpha*0.4})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(s.from.x + (s.to.x-s.from.x)*Math.max(0,s.t-0.1), s.from.y + (s.to.y-s.from.y)*Math.max(0,s.t-0.1));
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+
+  // Beide Organismen
+  drawOrganism(hub);
+  drawOrganism(uno);
+
+  // Labels in der Mitte
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(120,180,200,0.5)';
+  ctx.fillText('— RESPO·HUB ←→ ANKER·UNO —', CX, CY - 80);
+  ctx.fillText('Kumar · nur was du in den Wind schießen kannst', CX, CY + 80);
+}
+
+function drawOrganism(o){
+  const t = Date.now()/1000;
+
+  // Puls-Ring bei Beat
+  if(o.pulse > 0.01){
+    ctx.strokeStyle = o.alive
+      ? `rgba(140,240,208,${o.pulse})`
+      : `rgba(255,80,80,${o.pulse})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(o.x, o.y, o.r + (1 - o.pulse) * 60, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  // Äußerer Ring (Atmung)
+  ctx.strokeStyle = o.alive ? o.color : '#a04040';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(o.x, o.y, o.r + Math.sin(t*2 + (o.name==='HUB'?0:1))*3, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Kern
+  const grad = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r);
+  if(o.alive){
+    grad.addColorStop(0, o.color);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+  } else {
+    grad.addColorStop(0, '#602020');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+  }
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(o.x, o.y, o.r, 0, Math.PI*2);
+  ctx.fill();
+
+  // Name
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = o.alive ? o.color : '#a04040';
+  ctx.fillText(o.name, o.x, o.y + 5);
+
+  // Rolle
+  ctx.font = '10px monospace';
+  ctx.fillStyle = 'rgba(120,180,200,0.6)';
+  ctx.fillText(o.role, o.x, o.y + 22);
+
+  // Beat-Zähler
+  ctx.font = '9px monospace';
+  ctx.fillStyle = 'rgba(120,180,200,0.4)';
+  ctx.fillText(`♥ ${o.beat}`, o.x, o.y - o.r - 10);
+
+  // Status
+  const silence = (Date.now() - o.lastBeat) / 1000;
+  ctx.fillStyle = o.alive ? 'rgba(140,240,208,0.5)' : 'rgba(255,80,80,0.8)';
+  ctx.fillText(o.alive ? `lebt · ${silence.toFixed(1)}s` : `tot · ${silence.toFixed(1)}s`, o.x, o.y - o.r - 24);
+}
+
+// ── Loop ────────────────────────────────────────
+let lastTime = Date.now();
+function loop(){
+  const now = Date.now();
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+
+  update(dt);
+  draw();
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+
+function updateHUD(){
+  const el = document.getElementById('hud');
+  const age = ((Date.now() - START) / 1000).toFixed(0);
+  el.textContent =
+    `HUB ${hub.alive?'●':'○'} ${hub.beat}♥  |  UNO ${uno.alive?'●':'○'} ${uno.beat}♥\n` +
+    `Signale: ${signals.length}  |  Bets: ${WIND.bets.length}/${WIND.maxBets}  |  ${age}s`;
+}
+
+// ── Herzen: Trigger alle 3s an iframes ─────────
+setInterval(()=>{
+  try{
+    document.getElementById('hub').contentWindow.postMessage(
+      { type:"leben.trigger", to:"hub", payload:{ earg:true, t:Date.now() } }, "*");
+    document.getElementById('uno').contentWindow.postMessage(
+      { type:"leben.trigger", to:"uno", payload:{ blüht:true, t:Date.now() } }, "*");
+    // Visual: Signal fliegt
+    fire('HUB','UNO', { earg:true });
+    fire('UNO','HUB', { blüht:true });
+  }catch(e){
+    log('Trigger-Fehler: ' + e.message);
+  }
+}, 3000);
+
+// ── Antworten von iframes ──────────────────────
+window.addEventListener('message', (e) => {
+  const d = e.data || {};
+  if(d.type === 'leben.hubEvent'){
+    hub.beat++;
+    hub.lastBeat = Date.now();
+    hub.pulse = 0.8;
+    log('HUB antwortet: ' + JSON.stringify(d.payload||{}).slice(0,50));
+  }
+  if(d.type === 'leben.unoEvent'){
+    uno.beat++;
+    uno.lastBeat = Date.now();
+    uno.pulse = 0.8;
+    log('UNO antwortet: ' + JSON.stringify(d.payload||{}).slice(0,50));
+  }
+});
+
+// ── Log ────────────────────────────────────────
+const events = [];
+function log(msg){
+  events.push({ t: Date.now(), msg });
+  if(events.length > 20) events.shift();
+  // Optional: in Konsole
+  console.log('[leben]', msg);
+}
+
+// ── Boot ───────────────────────────────────────
+const START = Date.now();
+hub.lastBeat = Date.now();
+uno.lastBeat = Date.now();
+log('🌱 Wirt gestartet · zwei Organismen · Kumar-Prinzip aktiv');
+loop();
+</script>
+</body>
+</html>
