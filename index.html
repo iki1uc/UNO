@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>◉ MANA · AURA · ZEN · iki1uc</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#02060a;overflow:hidden}
+  body{font-family:'Consolas',monospace;color:#c8d8e8}
+  #stage{position:fixed;inset:0}
+  canvas{display:block;width:100%;height:100%}
+  .label{
+    position:fixed;font-size:9px;letter-spacing:3px;
+    color:#5a7288;text-transform:uppercase;pointer-events:none;
+    user-select:none
+  }
+  #tN{top:14px;left:50%;transform:translateX(-50%)}
+  #tE{top:50%;right:14px;transform:translateY(-50%)}
+  #tS{bottom:14px;left:50%;transform:translateX(-50%)}
+  #tW{top:50%;left:14px;transform:translateY(-50%)}
+  #center-label{
+    position:fixed;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    font-size:10px;letter-spacing:6px;
+    color:rgba(240,208,128,0.7);
+    text-transform:uppercase;pointer-events:none;
+    user-select:none;
+    text-shadow:0 0 20px rgba(240,208,128,0.4)
+  }
+  #boot{
+    position:fixed;inset:0;background:#000;z-index:100;
+    display:flex;align-items:center;justify-content:center;
+    transition:opacity 1.4s ease
+  }
+  #boot.done{opacity:0;pointer-events:none}
+  #boot .m{
+    font-size:11px;letter-spacing:8px;color:#f0d080;
+    opacity:0.6
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="c"></canvas>
+</div>
+
+<div class="label" id="tN">IX · KERN</div>
+<div class="label" id="tE">VII · ACHSEN</div>
+<div class="label" id="tS">VI · RESPO</div>
+<div class="label" id="tW">◉ · QUELLE</div>
+<div id="center-label">◉</div>
+
+<div id="boot"><div class="m">◉</div></div>
+
+<script>
+"use strict";
+
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
+let W, H, cx, cy, R;
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  c.width = W * dpr;
+  c.height = H * dpr;
+  c.style.width = W + "px";
+  c.style.height = H + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cx = W / 2;
+  cy = H / 2;
+  R = Math.min(W, H) * 0.36;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// ─── Die Drei ──────────────────────────────────────────
+const MANA = { name: "MANA", color: "#ff66c8", phase: 0, val: 0.5 };
+const AURA = { name: "AURA", color: "#f0d080", phase: Math.PI * 2/3, val: 0.7 };
+const ZEN  = { name: "ZEN",  color: "#8cf0d0", phase: Math.PI * 4/3, val: 0.9 };
+
+// ─── Die vier Himmelsrichtungen ───────────────────────
+const DIRS = [
+  { key: "N", angle: -Math.PI/2, count: 9, color: "#5cf0ff", speed: 0.00013, r: R * 0.95 },
+  { key: "E", angle: 0,          count: 7, color: "#b388ff", speed: 0.00017, r: R * 0.82 },
+  { key: "S", angle: Math.PI/2,  count: 6, color: "#39ff88", speed: 0.00021, r: R * 0.95 },
+  { key: "W", angle: Math.PI,    count: 1, color: "#f0d080", speed: 0.00009, r: R * 0.82 }
+];
+
+// ─── Alchemie-Symbole ──────────────────────────────────
+const SYM = ["☿","☉","☽","♀","♂","♃","♄","🜁","🜂","🜃","🜄","🜍","🜔","⊙","⊕"];
+
+// ─── Zustand ───────────────────────────────────────────
+const S = {
+  t: 0,
+  breath: 0,
+  centerPulse: 0,
+  particles: []
+};
+
+// ─── Partikel (Mana) ───────────────────────────────────
+function spawnParticle() {
+  const a = Math.random() * Math.PI * 2;
+  const r = R * 1.2;
+  S.particles.push({
+    x: cx + Math.cos(a) * r,
+    y: cy + Math.sin(a) * r,
+    vx: -Math.cos(a) * (0.4 + Math.random() * 0.6),
+    vy: -Math.sin(a) * (0.4 + Math.random() * 0.6),
+    life: 1,
+    size: 0.8 + Math.random() * 1.8,
+    color: Math.random() < 0.5 ? MANA.color :
+           Math.random() < 0.6 ? AURA.color : ZEN.color
+  });
+}
+
+// ─── Zeichnen ──────────────────────────────────────────
+function draw() {
+  // Hintergrund
+  ctx.fillStyle = "#02060a";
+  ctx.fillRect(0, 0, W, H);
+
+  // Atem (ganz langsam)
+  const b = 0.5 + Math.sin(S.t * 0.0006) * 0.5;
+  S.breath = b;
+
+  // Sternenstaub
+  for (let i = 0; i < 60; i++) {
+    const x = (i * 137.5) % W;
+    const y = (i * 91.3) % H;
+    const a = 0.02 + Math.sin(S.t * 0.0008 + i) * 0.02;
+    ctx.fillStyle = `rgba(120,200,255,${a})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  // ─── Drei Auren (Mana · Aura · Zen) ─────────────────
+  const drawAura = (o, baseR, alpha) => {
+    const ph = S.t * 0.001 + o.phase;
+    const rr = baseR * (1 + Math.sin(ph) * 0.08);
+    const g = ctx.createRadialGradient(cx, cy, rr * 0.2, cx, cy, rr);
+    g.addColorStop(0, o.color + "00");
+    g.addColorStop(0.7, o.color + Math.floor(alpha * 40).toString(16).padStart(2, "0"));
+    g.addColorStop(1, o.color + "00");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  drawAura(MANA, R * 1.0, 0.35);
+  drawAura(AURA, R * 1.15, 0.28);
+  drawAura(ZEN,  R * 1.3, 0.22);
+
+  // ─── Ring der vier Richtungen ───────────────────────
+  DIRS.forEach((d, di) => {
+    // Grundring
+    ctx.strokeStyle = d.color + "22";
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, d.r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Punkte der Richtung (Puppen)
+    for (let i = 0; i < d.count; i++) {
+      const baseA = d.angle;
+      const spread = (i / Math.max(1, d.count - 1) - 0.5) * (Math.PI * 0.55);
+      const a = baseA + spread + S.t * d.speed * 6;
+      const px = cx + Math.cos(a) * d.r;
+      const py = cy + Math.sin(a) * d.r;
+
+      // Atem der Puppe
+      const ph = S.t * 0.002 + i * 0.7 + di * 1.3;
+      const pulse = 0.5 + Math.sin(ph) * 0.5;
+      const size = 3.5 + pulse * 4;
+
+      // Glow
+      ctx.shadowColor = d.color;
+      ctx.shadowBlur = 10 * pulse;
+      ctx.fillStyle = d.color;
+      ctx.globalAlpha = 0.55 + pulse * 0.4;
+      ctx.beginPath();
+      ctx.arc(px, py, size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+
+      // Alchemie-Symbol (nur bei größeren)
+      if (d.count <= 9 && i === Math.floor(d.count / 2)) {
+        ctx.font = "11px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = d.color + "cc";
+        const s = SYM[(di * 4 + i) % SYM.length];
+        ctx.fillText(s, px, py - d.r * 0.12 - 18);
+      }
+    }
+
+    // Achse (Linie vom Zentrum)
+    ctx.strokeStyle = d.color + "44";
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(d.angle) * 30, cy + Math.sin(d.angle) * 30);
+    ctx.lineTo(cx + Math.cos(d.angle) * d.r, cy + Math.sin(d.angle) * d.r);
+    ctx.stroke();
+  });
+
+  // ─── Kreuz-Achsen (N-S, O-W) ────────────────────────
+  ctx.strokeStyle = "rgba(240,208,128,0.08)";
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - R * 1.3, cy); ctx.lineTo(cx + R * 1.3, cy);
+  ctx.moveTo(cx, cy - R * 1.3); ctx.lineTo(cx, cy + R * 1.3);
+  ctx.stroke();
+
+  // ─── Zentrum ────────────────────────────────────────
+  const cp = 0.5 + Math.sin(S.t * 0.002) * 0.5;
+  S.centerPulse = cp;
+
+  // Innerer Kern (immer wachsend/fallend)
+  const coreR = 8 + cp * 6;
+  const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 4);
+  cg.addColorStop(0, "rgba(255,255,255,0.95)");
+  cg.addColorStop(0.3, "rgba(240,208,128,0.7)");
+  cg.addColorStop(0.7, "rgba(179,136,255,0.2)");
+  cg.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = cg;
+  ctx.beginPath();
+  ctx.arc(cx, cy, coreR * 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Kern-Punkt
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  ctx.beginPath();
+  ctx.arc(cx, cy, coreR * 0.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ─── Konsequenz-Kette (Puppen wandern) ─────────────
+  // Zwischen benachbarten Richtungen zeichnen
+  for (let i = 0; i < DIRS.length; i++) {
+    const a = DIRS[i];
+    const b2 = DIRS[(i + 1) % DIRS.length];
+    const ax = cx + Math.cos(a.angle) * a.r;
+    const ay = cy + Math.sin(a.angle) * a.r;
+    const bx = cx + Math.cos(b2.angle) * b2.r;
+    const by = cy + Math.sin(b2.angle) * b2.r;
+
+    // Bogen zwischen den Richtungen
+    const midA = (a.angle + b2.angle) / 2 + (a.angle > b2.angle ? Math.PI/2 : -Math.PI/2) * 0;
+    const midX = (ax + bx) / 2;
+    const midY = (ay + by) / 2;
+
+    // Licht das wandert
+    const tt = (S.t * 0.0004 + i * 0.25) % 1;
+    const px = ax + (bx - ax) * tt;
+    const py = ay + (by - ay) * tt;
+
+    ctx.fillStyle = a.color + "88";
+    ctx.beginPath();
+    ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ─── Partikel (Mana-Fluss) ──────────────────────────
+  if (S.t % 3 === 0 && S.particles.length < 40) spawnParticle();
+
+  S.particles = S.particles.filter(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 0.004;
+    if (p.life <= 0) return false;
+
+    ctx.globalAlpha = p.life * 0.7;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    return true;
+  });
+
+  S.t++;
+  requestAnimationFrame(draw);
+}
+
+// ─── Boot-Ausblendung ───────────────────────────────────
+setTimeout(() => {
+  document.getElementById("boot").classList.add("done");
+}, 600);
+
+draw();
+</script>
+</body>
+</html>
