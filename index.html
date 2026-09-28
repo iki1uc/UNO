@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ATOM · index · iki1uc</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#000;color:#c8d8e8;
+    font-family:'Consolas',monospace;font-size:13px;overflow:hidden}
+
+  #atom{display:grid;grid-template-rows:32px 1fr 24px;height:100%}
+
+  #top{background:#0a1a2a;color:#5cf0ff;display:flex;align-items:center;
+    padding:0 14px;font-size:11px;letter-spacing:2px;gap:14px;
+    border-bottom:1px solid #1a3a5a}
+  #top b{color:#f0d080}
+  #top .right{margin-left:auto;display:flex;gap:14px;font-size:10px;color:#6888a8}
+
+  #main{display:grid;grid-template-columns:1fr 1fr;gap:2px;
+    background:#000;overflow:hidden;min-height:0}
+
+  .panel{background:#0a0a12;display:flex;flex-direction:column;
+    overflow:hidden;min-height:0}
+  .panel h2{background:#0c1828;color:#5cf0ff;font-size:11px;
+    padding:4px 10px;letter-spacing:1px;font-weight:normal;
+    border-bottom:1px solid #1a2a3a;display:flex;
+    justify-content:space-between}
+  .panel h2 b{color:#f0d080}
+  .body{flex:1;overflow:auto;padding:10px;font-size:12px;line-height:1.6}
+
+  /* links: self */
+  #canvas{display:block;width:100%;height:100%}
+
+  /* rechts: scan */
+  .scan-row{display:flex;justify-content:space-between;
+    padding:4px 0;border-bottom:1px dashed #1a2a3a;font-size:11px}
+  .scan-row .k{color:#5a7288}
+  .scan-row .v{color:#f0d080;font-weight:bold}
+  .scan-row .v.ok{color:#0f0}
+  .scan-row .v.warn{color:#f0d080}
+  .scan-row .v.err{color:#f55}
+
+  .atom-line{padding:3px 0;font-size:11px;display:flex;gap:6px}
+  .atom-line .t{color:#0ff;flex-shrink:0}
+  .atom-line .m{flex:1;color:#c8d8e8}
+  .atom-line.ok .m{color:#0f0}
+  .atom-line.warn .m{color:#f0d080}
+  .atom-line.info .m{color:#5cf0ff}
+
+  #bottom{background:#0a1a2a;color:#6888a8;font-size:10.5px;
+    padding:0 14px;display:flex;align-items:center;gap:16px;
+    border-top:1px solid #1a3a5a}
+  #bottom b{color:#f0d080}
+  #bottom .a{color:#5cf0ff}
+</style>
+</head>
+<body>
+
+<div id="atom">
+  <div id="top">
+    <span>◈ <b>ATOM</b> · index · iki1uc</span>
+    <span class="right">
+      <span>SELF <b id="topSelf">—</b></span>
+      <span>OTHER <b id="topOther">—</b></span>
+      <span id="clock">--:--:--</span>
+    </span>
+  </div>
+
+  <div id="main">
+    <div class="panel">
+      <h2><span>◈ SELF · mirror</span><b id="selfState">ruht</b></h2>
+      <div class="body" style="padding:0;display:flex">
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2><span>◈ SCAN · our</span><b id="scanState">bereit</b></h2>
+      <div class="body" id="scanBox">
+        <div class="scan-row"><span class="k">id</span><span class="v" id="sId">—</span></div>
+        <div class="scan-row"><span class="k">core</span><span class="v ok">iki1uc</span></div>
+        <div class="scan-row"><span class="k">mode</span><span class="v">RAW</span></div>
+        <div class="scan-row"><span class="k">state</span><span class="v ok">STABIL</span></div>
+        <div class="scan-row"><span class="k">self</span><span class="v" id="sSelf">—</span></div>
+        <div class="scan-row"><span class="k">other</span><span class="v" id="sOther">—</span></div>
+        <div class="scan-row"><span class="k">match</span><span class="v" id="sMatch">—</span></div>
+        <hr style="border:0;border-top:1px solid #1a2a3a;margin:10px 0">
+        <div id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottom">
+    <span>◈ ATOM · <b>mirror me</b> · show our scan</span>
+    <span class="a">ein Atom · ein Move</span>
+    <span style="margin-left:auto">© iki1uc</span>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════════
+   ATOM · index · iki1uc
+   mirror me · show our scan
+   ═══════════════════════════════════════════════════════════ */
+
+const SELF = {
+  id:    "ATOM-01",
+  core:  "iki1uc",
+  mode:  "RAW",
+  state: "STABIL",
+  tick:  0,
+  alive: true
+};
+
+const OTHER = {
+  id:    null,
+  seen:  false,
+  state: "unbekannt"
+};
+
+const S = {
+  match: 0,
+  tick: 0,
+  logs: []
+};
+
+/* ─── LOG ──────────────────────────────────────────────── */
+function log(msg, cls = "") {
+  const el = document.getElementById("log");
+  const t = new Date().toLocaleTimeString("de-DE");
+  const div = document.createElement("div");
+  div.className = "atom-line " + cls;
+  div.innerHTML = `<span class="t">${t}</span><span class="m">${msg}</span>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 60) el.removeChild(el.firstChild);
+  S.logs.push({ t, msg, cls });
+}
+
+/* ─── SELF INIT ────────────────────────────────────────── */
+document.getElementById("sId").textContent = SELF.id;
+document.getElementById("topSelf").textContent = SELF.id;
+
+/* ─── OTHER SCAN ───────────────────────────────────────── */
+function scanOther() {
+  // Andere Atome wären hier: window.parent, andere iframes, andere Datei
+  // In einer echten Umgebung: postMessage, fetch, etc.
+  // Hier: simuliert der Scan, was im Umfeld ist
+
+  let found = false;
+
+  // 1. Schau nach ob parent window existiert (eingebettet)
+  try {
+    if (window.parent && window.parent !== window) {
+      found = true;
+      OTHER.id = "PARENT";
+      OTHER.state = "verbunden";
+    }
+  } catch(_) {}
+
+  // 2. Schau nach ob andere ATOM-Instanzen über localStorage
+  try {
+    const peers = localStorage.getItem("iki1uc.atoms");
+    if (peers) {
+      const list = JSON.parse(peers);
+      if (list.length > 0) {
+        found = true;
+        OTHER.id = list[0];
+        OTHER.state = "gefunden";
+      }
+    }
+  } catch(_) {}
+
+  // 3. SELF in die Liste eintragen (damit andere uns finden)
+  try {
+    const me = JSON.parse(localStorage.getItem("iki1uc.atoms") || "[]");
+    if (!me.includes(SELF.id)) {
+      me.push(SELF.id);
+      localStorage.setItem("iki1uc.atoms", JSON.stringify(me.slice(-21)));
+    }
+  } catch(_) {}
+
+  OTHER.seen = found;
+  if (found) {
+    document.getElementById("sOther").textContent = OTHER.id;
+    document.getElementById("sOther").className = "v ok";
+    document.getElementById("topOther").textContent = OTHER.id;
+    S.match = 1;
+    document.getElementById("sMatch").textContent = "1 gefunden";
+    document.getElementById("sMatch").className = "v ok";
+    log(`◈ other gefunden · ${OTHER.id} · ${OTHER.state}`, "ok");
+  } else {
+    document.getElementById("sOther").textContent = "— allein —";
+    document.getElementById("topOther").textContent = "—";
+    S.match = 0;
+    document.getElementById("sMatch").textContent = "0 · allein";
+    log(`◈ other · nicht gefunden · allein ok`, "info");
+  }
+}
+
+/* ─── CANVAS — mirror me ───────────────────────────────── */
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+let W, H;
+
+function resize() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + "px";
+  canvas.style.height = H + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener("resize", () => { resize(); });
+
+function draw() {
+  const t = S.tick;
+  const cx = W / 2, cy = H / 2;
+
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, W, H);
+
+  // Sternenstaub
+  for (let i = 0; i < 50; i++) {
+    const x = (i * 137) % W;
+    const y = (i * 91) % H;
+    const a = 0.04 + Math.sin(t * 0.02 + i) * 0.03;
+    ctx.fillStyle = `rgba(92,240,255,${a})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  // Kern = SELF
+  const pulse = 0.5 + Math.sin(t * 0.06) * 0.4;
+  ctx.fillStyle = `rgba(240,208,128,${pulse})`;
+  ctx.shadowColor = "#f0d080";
+  ctx.shadowBlur = 25 * pulse;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 12 + Math.sin(t * 0.1) * 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = "#f0d080";
+  ctx.font = "bold 14px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(SELF.id, cx, cy - 28);
+
+  // Elektronen-Bahn (3 Kreise, wie 3-9-81)
+  const orbits = [
+    { r: 60,  c: "#5cf0ff", e: 1 },
+    { r: 100, c: "#39ff88", e: 2 },
+    { r: 140, c: "#b388ff", e: 3 }
+  ];
+  orbits.forEach((o, i) => {
+    ctx.strokeStyle = o.c + "33";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, o.r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Elektron darauf
+    const a = t * 0.03 + i * 2.1;
+    const ex = cx + Math.cos(a) * o.r;
+    const ey = cy + Math.sin(a) * o.r;
+    ctx.fillStyle = o.c;
+    ctx.shadowColor = o.c;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+
+  // Wenn OTHER gefunden: zweiter Kern daneben
+  if (OTHER.seen) {
+    const ox = cx + 180;
+    const opulse = 0.5 + Math.sin(t * 0.08 + Math.PI) * 0.4;
+    ctx.fillStyle = `rgba(92,240,255,${opulse})`;
+    ctx.shadowColor = "#5cf0ff";
+    ctx.shadowBlur = 20 * opulse;
+    ctx.beginPath();
+    ctx.arc(ox, cy, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = "#5cf0ff";
+    ctx.font = "bold 12px monospace";
+    ctx.fillText(OTHER.id, ox, cy - 24);
+
+    // Verbindungslinie
+    ctx.strokeStyle = "rgba(240,208,128,0.5)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(cx + 12, cy);
+    ctx.lineTo(ox - 10, cy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    // Zeige: allein · aber nicht einsam
+    ctx.fillStyle = "rgba(90,114,136,0.6)";
+    ctx.font = "11px monospace";
+    ctx.fillText("· allein · aber nicht einsam ·", cx, cy + 60);
+  }
+
+  S.tick++;
+  requestAnimationFrame(draw);
+}
+
+/* ─── CLOCK ────────────────────────────────────────────── */
+setInterval(() => {
+  document.getElementById("clock").textContent =
+    new Date().toLocaleTimeString("de-DE");
+}, 1000);
+
+/* ─── INIT ─────────────────────────────────────────────── */
+resize();
+document.getElementById("selfState").textContent = SELF.state.toLowerCase();
+log("◈ ATOM geladen · " + SELF.id, "ok");
+log("  mirror me · show our scan", "info");
+log("  self · " + SELF.id + " · " + SELF.state, "");
+
+scanOther();
+setInterval(scanOther, 3000);
+
+draw();
+
+/* Public API */
+window.ATOM = {
+  self: SELF,
+  other: OTHER,
+  scan: scanOther,
+  state: () => ({ self: SELF.id, other: OTHER.id, match: S.match, seen: OTHER.seen })
+};
+</script>
+</body>
+</html>
