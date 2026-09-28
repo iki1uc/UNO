@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NETPILOT · Move-Policy · iki1uc</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#000;color:#c8d8e8;
+    font-family:'Consolas',monospace;font-size:13px;overflow:hidden}
+
+  #pilot{display:grid;grid-template-rows:32px 1fr 24px;height:100%}
+
+  #top{background:#0a1a2a;color:#5cf0ff;display:flex;align-items:center;
+    padding:0 14px;font-size:11px;letter-spacing:2px;gap:14px;
+    border-bottom:1px solid #1a3a5a}
+  #top b{color:#f0d080}
+  #top .right{margin-left:auto;display:flex;gap:14px;font-size:10px;color:#6888a8}
+
+  #main{display:grid;grid-template-columns:280px 1fr 320px;
+    gap:2px;background:#000;overflow:hidden;min-height:0}
+
+  .col{background:#0a0a12;display:flex;flex-direction:column;
+    overflow:hidden;min-height:0}
+  .col h2{background:#0c1828;color:#5cf0ff;font-size:11px;
+    padding:4px 10px;letter-spacing:1px;font-weight:normal;
+    border-bottom:1px solid #1a2a3a;display:flex;
+    justify-content:space-between}
+  .col h2 b{color:#f0d080}
+  .body{flex:1;overflow:auto;padding:10px;font-size:12px;line-height:1.6}
+
+  /* Move-Vorschläge */
+  .move-item{padding:6px 8px;margin-bottom:4px;background:#0c1828;
+    border-left:2px solid #5cf0ff;border-radius:3px;cursor:pointer;
+    font-size:11px;transition:.15s}
+  .move-item:hover{background:#1a2a3a;border-left-color:#f0d080}
+  .move-item.on{background:#1a3a4a;border-left-color:#f0d080}
+  .move-item .nm{color:#f0d080;font-weight:bold}
+  .move-item .d{color:#5a7288;font-size:10px;margin-top:2px}
+  .move-item.banned{border-left-color:#f55;opacity:0.5}
+  .move-item.banned .nm{color:#f55}
+  .move-item.banned .d{color:#a55}
+  .move-item.confirmed{border-left-color:#0f0}
+  .move-item.confirmed .nm{color:#0f0}
+
+  /* Canvas */
+  #stage{position:relative;background:#000;display:flex;
+    align-items:center;justify-content:center;overflow:hidden}
+  #canvas{display:block}
+  .stage-info{position:absolute;top:12px;left:14px;
+    font-size:10px;color:#5a4a6a;letter-spacing:2px}
+  .stage-info b{color:#f0d080}
+
+  /* Rechts: Prüfung */
+  .row{display:flex;justify-content:space-between;padding:3px 0;
+    border-bottom:1px dashed #1a2a3a;font-size:11px}
+  .row:last-child{border-bottom:none}
+  .row .k{color:#5a7288}
+  .row .v{color:#f0d080;font-weight:bold}
+  .row .v.ok{color:#0f0}
+  .row .v.warn{color:#f0d080}
+  .row .v.err{color:#f55}
+
+  .gates{display:grid;grid-template-columns:repeat(3,1fr);
+    gap:4px;padding:8px}
+  .gate{padding:8px 2px;text-align:center;background:#0a0a12;
+    border:1px solid #1a2a3a;border-radius:4px;cursor:pointer;
+    transition:.15s;font-size:10px}
+  .gate:hover{border-color:#5cf0ff}
+  .gate.on{background:#1a3a2a;border-color:#0f0;color:#0f0;
+    box-shadow:0 0 10px rgba(0,255,0,.3)}
+  .gate.off{background:#2a1a1a;border-color:#f55;color:#f55;
+    box-shadow:0 0 10px rgba(255,80,80,.3)}
+  .gate .n{font-size:16px;font-weight:bold;display:block;color:#5a7288}
+  .gate.on .n{color:#0f0}
+  .gate.off .n{color:#f55}
+  .gate .s{font-size:9px;color:#5a7288}
+
+  .btn-row{display:flex;gap:4px;padding:6px;flex-wrap:wrap}
+  .btn-row button{background:#0a0a12;color:#5cf0ff;
+    border:1px solid #1a2a3a;padding:6px 12px;border-radius:3px;
+    font-family:inherit;font-size:10px;cursor:pointer;
+    letter-spacing:1px;transition:.15s;flex:1;min-width:70px}
+  .btn-row button:hover{border-color:#5cf0ff;background:#0c1828}
+  .btn-row button.primary{border-color:#f0d080;color:#f0d080}
+  .btn-row button.primary:hover{background:#1a1208}
+  .btn-row button.danger{border-color:#f55;color:#f55}
+
+  .log-line{padding:2px 0;font-size:10.5px;display:flex;gap:6px;
+    word-break:break-word}
+  .log-line .t{color:#4a3a5a;flex-shrink:0}
+  .log-line .m{flex:1}
+  .log-line.ok .m{color:#0f0}
+  .log-line.warn .m{color:#f0d080}
+  .log-line.err .m{color:#f55}
+  .log-line.info .m{color:#5cf0ff}
+  .log-line.ban .m{color:#f55;font-weight:bold}
+
+  #bottom{background:#0a1a2a;color:#6888a8;font-size:10.5px;
+    padding:0 14px;display:flex;align-items:center;gap:16px;
+    border-top:1px solid #1a3a5a}
+  #bottom b{color:#f0d080}
+</style>
+</head>
+<body>
+
+<div id="pilot">
+  <div id="top">
+    <span>◈ <b>NETPILOT</b> · Move-Policy · iki1uc</span>
+    <span class="right">
+      <span>MOVES <b id="topMoves">0</b></span>
+      <span>GESETZ <b id="topLaw">—</b></span>
+      <span>GATE <b id="topGate">0/3</b></span>
+      <span id="clock">--:--:--</span>
+    </span>
+  </div>
+
+  <div id="main">
+    <!-- LINKS: Moves -->
+    <div class="col">
+      <h2><span>◈ MOVES</span><b id="moveCount">0</b></h2>
+      <div class="body" id="moveList"></div>
+    </div>
+
+    <!-- MITTE: Canvas -->
+    <div id="stage">
+      <canvas id="canvas" width="700" height="600"></canvas>
+      <div class="stage-info">
+        MOVE · <b id="stageMove">—</b> · <span id="stageState">ruht</span>
+      </div>
+    </div>
+
+    <!-- RECHTS: Prüfung -->
+    <div class="col">
+      <h2><span>◈ PRÜFUNG</span><b id="pruefState">—</b></h2>
+
+      <div class="body" style="flex:0 0 auto">
+        <div class="row"><span class="k">move</span><span class="v" id="pMove">—</span></div>
+        <div class="row"><span class="k">typ</span><span class="v" id="pType">—</span></div>
+        <div class="row"><span class="k">gesetz</span><span class="v ok" id="pLaw">treu</span></div>
+        <div class="row"><span class="k">stationär</span><span class="v" id="pStat">—</span></div>
+        <div class="row"><span class="k">rational</span><span class="v" id="pRat">—</span></div>
+        <div class="row"><span class="k">status</span><span class="v" id="pStatus">—</span></div>
+      </div>
+
+      <h2 style="background:#0c1828;color:#5cf0ff;font-size:11px;
+        padding:4px 10px;letter-spacing:1px;font-weight:normal;
+        border-top:1px solid #1a2a3a;border-bottom:1px solid #1a2a3a;
+        display:flex;justify-content:space-between">
+        <span>◈ 3FACH-GATE</span><b id="gateCount">0/3</b>
+      </h2>
+      <div class="gates" id="gateBox"></div>
+
+      <div class="btn-row">
+        <button class="primary" id="btnMove">▶ MOVE</button>
+        <button id="btnReset">⟲ RESET</button>
+      </div>
+
+      <h2 style="background:#0c1828;color:#5cf0ff;font-size:11px;
+        padding:4px 10px;letter-spacing:1px;font-weight:normal;
+        border-top:1px solid #1a2a3a;border-bottom:1px solid #1a2a3a;
+        display:flex;justify-content:space-between">
+        <span>◈ LOG</span><b id="logCount" style="color:#f0d080">0</b>
+      </h2>
+      <div class="body" id="log" style="flex:1"></div>
+    </div>
+  </div>
+
+  <div id="bottom">
+    <span>◈ NETPILOT · führt · klärt · übergibt</span>
+    <span>3× Ja → Move · 3× Nein → <b>24h Bann</b></span>
+    <span style="margin-left:auto">© iki1uc</span>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════════
+   NETPILOT · Move-Policy · iki1uc
+   Alle Moves:
+     - stationär + rational
+     - konventionell → unkonventionell
+     - gesetzestreu (keine ungesetzliche Nutzung)
+     - 3× Ja = Move · 3× Nein = 24h Bann
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── MOVES ─────────────────────────────────────────────── */
+const MOVES = {
+  edit:       { label: "edit",       d: "schreiben · ändern",            type: "konventionell" },
+  agent:      { label: "agent",      d: "verteilen · bewegen",           type: "unkonventionell" },
+  patch:      { label: "patch",      d: "heilen · flicken",              type: "konventionell" },
+  dispatch:   { label: "dispatch",   d: "senden · abfeuern",             type: "unkonventionell" },
+  controller: { label: "controller", d: "verwalten · führen",            type: "konventionell" },
+  move:       { label: "move",       d: "bewegen · fließen",             type: "unkonventionell" }
+};
+
+/* ─── STATE ────────────────────────────────────────────── */
+const S = {
+  activeMove: null,
+  gates: [null, null, null],   // null=offen · true=ja · false=nein
+  banned: {},                   // { moveKey: timestampEnde }
+  tick: 0,
+  logs: []
+};
+
+/* ─── LOG ──────────────────────────────────────────────── */
+function log(msg, cls = "") {
+  const el = document.getElementById("log");
+  const t = new Date().toLocaleTimeString("de-DE");
+  const div = document.createElement("div");
+  div.className = "log-line " + cls;
+  div.innerHTML = `<span class="t">${t}</span><span class="m">${msg}</span>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 200) el.removeChild(el.firstChild);
+  S.logs.push({ t, msg, cls });
+  document.getElementById("logCount").textContent = S.logs.length;
+}
+
+/* ─── MOVES LIST ───────────────────────────────────────── */
+function buildMoves() {
+  const el = document.getElementById("moveList");
+  el.innerHTML = "";
+  const now = Date.now();
+  Object.entries(MOVES).forEach(([key, m]) => {
+    const bannedUntil = S.banned[key] || 0;
+    const isBanned = bannedUntil > now;
+    const d = document.createElement("div");
+    d.className = "move-item" + (S.activeMove === key ? " on" : "") + (isBanned ? " banned" : "");
+    d.dataset.key = key;
+    let status = "";
+    if (isBanned) {
+      const restMin = Math.ceil((bannedUntil - now) / 60000);
+      status = ` · BANN ${restMin}min`;
+    }
+    d.innerHTML = `
+      <div class="nm">${m.label}${status}</div>
+      <div class="d">${m.d} · ${m.type}</div>`;
+    d.onclick = () => { if (!isBanned) selectMove(key); };
+    el.appendChild(d);
+  });
+  document.getElementById("moveCount").textContent = Object.keys(MOVES).length;
+  document.getElementById("topMoves").textContent = Object.keys(MOVES).length;
+}
+
+function selectMove(key) {
+  S.activeMove = key;
+  S.gates = [null, null, null];
+  document.querySelectorAll(".move-item").forEach(el =>
+    el.classList.toggle("on", el.dataset.key === key));
+  const m = MOVES[key];
+  document.getElementById("pMove").textContent = m.label;
+  document.getElementById("pType").textContent = m.type;
+  document.getElementById("stageMove").textContent = m.label;
+  document.getElementById("stageState").textContent = "prüfen";
+  document.getElementById("pruefState").textContent = "offen";
+  log(`◈ move gewählt · ${m.label} · ${m.type}`, "info");
+  updateUI();
+}
+
+/* ─── GATES ────────────────────────────────────────────── */
+function buildGates() {
+  const el = document.getElementById("gateBox");
+  el.innerHTML = "";
+  for (let i = 0; i < 3; i++) {
+    const d = document.createElement("div");
+    d.className = "gate" + (S.gates[i] === true ? " on" : S.gates[i] === false ? " off" : "");
+    d.dataset.i = i;
+    d.innerHTML = `<span class="n">${i + 1}</span><span class="s">—</span>`;
+    d.onclick = () => toggleGate(i, true);
+    d.oncontextmenu = (e) => { e.preventDefault(); toggleGate(i, false); };
+    el.appendChild(d);
+  }
+}
+
+function toggleGate(i, val) {
+  if (!S.activeMove) { log("⚠ erst move wählen", "warn"); return; }
+  S.gates[i] = val;
+  updateGates();
+  updateUI();
+  const v = val ? "JA" : "NEIN";
+  log(`◈ gate ${i + 1} · ${v}`, val ? "ok" : "err");
+
+  // Prüfen ob alle drei gesetzt
+  const allSet = S.gates.every(g => g !== null);
+  if (allSet) {
+    const allJa = S.gates.every(g => g === true);
+    const allNein = S.gates.every(g => g === false);
+
+    if (allJa) {
+      log(`✓ 3× JA · move freigegeben · ${MOVES[S.activeMove].label}`, "ok");
+      document.getElementById("pruefState").textContent = "freigegeben";
+      document.getElementById("stageState").textContent = "✓ freigegeben";
+    } else if (allNein) {
+      log(`✗ 3× NEIN · 24h BANN · ${MOVES[S.activeMove].label}`, "ban");
+      S.banned[S.activeMove] = Date.now() + 24 * 60 * 60 * 1000;
+      document.getElementById("pruefState").textContent = "BANN 24h";
+      document.getElementById("stageState").textContent = "24h bann";
+      buildMoves();
+    } else {
+      log(`⚠ gemischt · erneut prüfen · ${S.gates.map(g => g ? "J" : "N").join("·")}`, "warn");
+      document.getElementById("pruefState").textContent = "gemischt";
+      document.getElementById("stageState").textContent = "wiederholen";
+    }
+  }
+}
+
+function updateGates() {
+  document.querySelectorAll(".gate").forEach((el, i) => {
+    el.className = "gate" + (S.gates[i] === true ? " on" : S.gates[i] === false ? " off" : "");
+    el.querySelector(".s").textContent = S.gates[i] === true ? "JA" : S.gates[i] === false ? "NEIN" : "—";
+  });
+  const c = S.gates.filter(g => g !== null).length;
+  document.getElementById("gateCount").textContent = c + "/3";
+  document.getElementById("topGate").textContent = c + "/3";
+}
+
+function updateUI() {
+  if (!S.activeMove) return;
+  const m = MOVES[S.activeMove];
+  const allJa = S.gates.every(g => g === true);
+
+  document.getElementById("pLaw").textContent = "treu";
+  document.getElementById("pLaw").className = "v ok";
+  document.getElementById("pStat").textContent = "✓";
+  document.getElementById("pRat").textContent = "✓";
+  document.getElementById("pStatus").textContent = allJa ? "move bereit" : "prüfung";
+  document.getElementById("topLaw").textContent = "treu";
+}
+
+/* ─── CANVAS ────────────────────────────────────────────── */
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+let W, H;
+
+function resize() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + "px";
+  canvas.style.height = H + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener("resize", () => { resize(); });
+
+function draw() {
+  const t = S.tick;
+  const cx = W / 2, cy = H / 2;
+
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, W, H);
+
+  // Sternenstaub
+  for (let i = 0; i < 50; i++) {
+    const x = (i * 137) % W;
+    const y = (i * 91) % H;
+    const a = 0.04 + Math.sin(t * 0.02 + i) * 0.03;
+    ctx.fillStyle = `rgba(92,240,255,${a})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  // 3 Gates als Ringe
+  const allJa = S.gates.every(g => g === true);
+  const allNein = S.gates.every(g => g === false);
+
+  S.gates.forEach((g, i) => {
+    const r = 60 + i * 40;
+    let color = "#3a4a5a";        // offen · grau
+    if (g === true) color = "#0f0";
+    if (g === false) color = "#f55";
+
+    ctx.strokeStyle = color + (allJa ? "ff" : "55");
+    ctx.lineWidth = allJa ? 3 : 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  // Zentrum
+  const centerColor = allJa ? "#0f0" : allNein ? "#f55" : "#f0d080";
+  const pulse = 0.6 + Math.sin(t * 0.08) * 0.4;
+  ctx.fillStyle = `rgba(${allJa ? "0,255,0" : allNein ? "255,85,85" : "240,208,128"},${pulse})`;
+  ctx.shadowColor = centerColor;
+  ctx.shadowBlur = 25 * pulse;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 14 + Math.sin(t * 0.1) * 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Label
+  ctx.fillStyle = centerColor;
+  ctx.font = "bold 13px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(S.activeMove ? MOVES[S.activeMove].label.toUpperCase() : "MOVE", cx, cy);
+
+  // Statuszeile unten
+  if (allJa) {
+    ctx.fillStyle = "#0f0";
+    ctx.font = "11px monospace";
+    ctx.fillText("✓ freigegeben · move läuft", cx, cy + 160);
+  } else if (allNein) {
+    ctx.fillStyle = "#f55";
+    ctx.font = "11px monospace";
+    ctx.fillText("✗ 24h bann", cx, cy + 160);
+  }
+
+  S.tick++;
+  requestAnimationFrame(draw);
+}
+
+/* ─── BUTTONS ──────────────────────────────────────────── */
+document.getElementById("btnMove").addEventListener("click", () => {
+  if (!S.activeMove) { log("⚠ erst move wählen", "warn"); return; }
+  const allJa = S.gates.every(g => g === true);
+  if (allJa) {
+    log(`◈ MOVE AUSGEFÜHRT · ${MOVES[S.activeMove].label}`, "ok");
+    log(`  konventionell → unkonventionell · übergabe an agent`, "info");
+    // Handover zurück zu index
+    if (window.ATOM) {
+      log(`  → handover an ATOM`, "info");
+    }
+    // Reset gates für nächsten Move
+    S.gates = [null, null, null];
+    updateGates();
+    document.getElementById("pruefState").textContent = "ausgeführt";
+    document.getElementById("stageState").textContent = "ausgeführt";
+  } else {
+    log("⚠ move braucht 3× JA", "warn");
+  }
+});
+
+document.getElementById("btnReset").addEventListener("click", () => {
+  S.activeMove = null;
+  S.gates = [null, null, null];
+  document.getElementById("pMove").textContent = "—";
+  document.getElementById("pType").textContent = "—";
+  document.getElementById("pruefState").textContent = "—";
+  document.getElementById("stageMove").textContent = "—";
+  document.getElementById("stageState").textContent = "ruht";
+  document.querySelectorAll(".move-item").forEach(el => el.classList.remove("on"));
+  updateGates();
+  buildMoves();
+  log("⟲ reset", "warn");
+});
+
+/* ─── CLOCK ────────────────────────────────────────────── */
+setInterval(() => {
+  document.getElementById("clock").textContent =
+    new Date().toLocaleTimeString("de-DE");
+  // Banns prüfen
+  const now = Date.now();
+  let changed = false;
+  for (const k in S.banned) {
+    if (S.banned[k] <= now) { delete S.banned[k]; changed = true; }
+  }
+  if (changed) buildMoves();
+}, 1000);
+
+/* ─── INIT ─────────────────────────────────────────────── */
+resize();
+buildMoves();
+buildGates();
+updateGates();
+log("◈ NETPILOT geladen · Move-Policy aktiv", "ok");
+log("  gesetzestreu · stationär · rational", "info");
+log("  3× JA = Move · 3× NEIN = 24h Bann", "warn");
+log("© iki1uc", "");
+
+draw();
+
+/* Public API */
+window.NETPILOT = {
+  moves: MOVES,
+  select: selectMove,
+  gate: toggleGate,
+  run: () => document.getElementById("btnMove").click(),
+  state: () => ({
+    active: S.activeMove,
+    gates: [...S.gates],
+    banned: { ...S.banned }
+  })
+};
+</script>
+</body>
+</html>
